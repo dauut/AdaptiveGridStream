@@ -26,7 +26,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-=                            <mainClass>client.AdaptiveGridFTPClient</mainClass>
+                            <mainClass>client.AdaptiveGridFTPClient</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -42,11 +42,18 @@
         </plugins>
     </build>
     <repositories>
-    <repository>
-        <id>wisc</id>
-        <name>wisc</name>
-        <url>http://maven.in2p3.fr/</url>
-    </repository>
+        <repository>
+            <id>wisc</id>
+            <name>wisc</name>
+            <url>http://maven.in2p3.fr/</url>
+        </repository>
+
+        <!--This repository added for compilation-->
+        <repository>
+            <id>Codehaus Mojo</id>
+            <name>Codehaus Mojo</name>
+            <url>https://nexus.codehaus.org/content/repositories/releases/</url>
+        </repository>
     </repositories>
     <dependencies>
         <dependency>
