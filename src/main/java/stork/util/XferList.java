@@ -38,15 +38,9 @@ public class XferList implements Iterable<XferList.MlsxEntry> {
 
   // Create an XferList for a file.
   public XferList(String src, String dest, long size) {
-    String[] bits = src.split("/");
-    String fileName = bits[bits.length - 1];
-    StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < bits.length - 1; i++) {
-      builder.append(bits[i]+"/");
-    }
-    sp = builder.toString();
+    sp = src;
     dp = dest;
-    root = new MlsxEntry(fileName, size);
+    root = new MlsxEntry(src, size);
     list.add(root);
     this.size += size;
     count ++;
@@ -247,8 +241,10 @@ public class XferList implements Iterable<XferList.MlsxEntry> {
 
   public void updateDestinationPaths() {
     for (MlsxEntry e : list) {
-      if (dp.endsWith("/")) {
-        e.setdpath(dp + e.spath);
+      if (dp.compareTo("/dev/null") == 0) {
+        e.setdpath(dp);
+      } else if (dp.endsWith("/")){
+        e.setdpath(dp + e.fileName);
       } else {
         e.setdpath(dp);
       }
@@ -321,7 +317,7 @@ public class XferList implements Iterable<XferList.MlsxEntry> {
       return len;
     }
 
-    public String fullPath() {
+    public String path() {
       return XferList.this.sp + spath;
     }
 
@@ -330,11 +326,12 @@ public class XferList implements Iterable<XferList.MlsxEntry> {
     }
 
     public String dpath() {
+      //return XferList.this.dp + spath;
       return dpath;
     }
 
     public String toString() {
-      return (dir ? "Directory: " : "File: ") + spath + " -> " + dpath();
+      return (dir ? "Directory: " : "File: ") + path() + " -> " + dpath();
     }
 
     @Override

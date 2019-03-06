@@ -6,6 +6,7 @@ import client.Partition;
 import client.hysterisis.Hysterisis;
 import client.utils.TunableParameters;
 import client.utils.Utils;
+import client.hysterisis.Entry;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -225,7 +226,7 @@ public class CooperativeModule {
 
 
   private static class ControlChannel {
-    public final boolean local, gridftp;
+    public final boolean local, gridftp, hasCred;
     public final FTPServerFacade facade;
     public final FTPControlChannel fc;
     public final BasicClientControlChannel cc;
@@ -240,6 +241,7 @@ public class CooperativeModule {
       local = false;
       facade = null;
       gridftp = u.gridftp;
+      hasCred = u.cred != null;
       if (u.gridftp) {
         GridFTPControlChannel gc;
         cc = fc = gc = new GridFTPControlChannel(u.host, u.port);
@@ -295,9 +297,13 @@ public class CooperativeModule {
       }
       local = true;
       gridftp = rc.gridftp;
+      hasCred = rc.hasCred;
       if (gridftp) {
         facade = new GridFTPServerFacade((GridFTPControlChannel) rc.fc);
-        ((GridFTPServerFacade) facade).setDataChannelAuthentication(DataChannelAuthentication.NONE);
+
+        if (!hasCred) {
+          ((GridFTPServerFacade) facade).setDataChannelAuthentication(DataChannelAuthentication.NONE);
+        }
       } else {
         facade = new FTPServerFacade(rc.fc);
       }
@@ -654,16 +660,12 @@ public class CooperativeModule {
         if (e.dir) {
           pipeMkdir(e.dpath());
         } else {
-          // Reset port if we are using FTP in stream mode, otherwise channel will be closed after first file transfer.
-          if (!gridftp && mode == 'S') {
-            HostPort hp = setPassive();
-            setActive(hp);
-          }
           String checksum = null;
           if (enableCheckSum) {
-            checksum = pipeGetCheckSum(e.fullPath());
+            checksum = pipeGetCheckSum(e.path());
           }
-          pipeRetr(e.fullPath(), e.off, e.len);
+          System.out.println("Piping " + e.path() + " to " + e.dpath());
+          pipeRetr(e.path(), e.off, e.len);
           if (enableCheckSum && checksum != null)
             pipeStorCheckSum(checksum);
           pipeStor(e.dpath(), e.off, e.len);
@@ -1041,12 +1043,13 @@ public class CooperativeModule {
 
         while (!dirs.isEmpty())
           waiting.add(dirs.pop());
+        System.out.println("Waiting has " + waiting.size() + " items");
 
         // Pipeline commands like a champ.
         while  (currentPipelining < MAXIMUM_PIPELINING && !waiting.isEmpty()) {
           String p = waiting.pop();
           cc.pipePassive();
-          System.out.println("Piping  " + cmd + " " + path+p);
+          System.out.println("Pipelining " + cmd + " " + path+p);
           cc.rc.write(cmd, path + p);
           working.add(p);
           currentPipelining++;
@@ -1088,6 +1091,8 @@ public class CooperativeModule {
             if (e.dir) {
               subdirs.add(e.spath);
             }
+            //if (e.dir) System.out.println("Directory:"+e.spath()+" "+e.dpath()+" "+spath);
+
           }
           list.addAll(xl);
 
@@ -1155,15 +1160,9 @@ public class CooperativeModule {
         xl.dp = dp;
       } else {  // Otherwise it's just one file.
         xl = new XferList(sp, dp, size(sp));
+
       }
       // Pass the list off to the transfer() which handles lists.
-      xl.updateDestinationPaths();
-      for (MlsxEntry entry : xl.getFileList()) {
-        if (entry.dir) {
-          LOG.info("Creating directory " + entry.dpath);
-          cc.pipeMkdir(entry.dpath);
-        }
-      }
       return xl;
     }
 
@@ -1286,7 +1285,36 @@ public class CooperativeModule {
       updateOnAir(newFileList, +1);
       return newChannel;
     }
+    /*
+        void changeChunkOfChannel(ChannelPair channel, int chunkId) {
+          System.out.println("channel " + channel.id + " finished its job in Chunk " + channel.xferListIndex + "*" +
+              getChannels(chunks.get(channel.xferListIndex).getRecords()) + " moving to Chunk " +
+              channel.newxferListIndex + "*" + getChannels(chunks.get(channel.newxferListIndex).getRecords()));
+          MlsxEntry fileToStart = getNextFile(channel.xferListIndex);
+          if (fileToStart == null) {
+            return;
+          }
+          XferList newChunk = chunks.get(channel.newxferListIndex).getRecords();
+          int channelId = channel.id;
+          int newChunkId = channel.newxferListIndex;
+          long start = System.currentTimeMillis();
+          //cc.close();
+          channel = new ChannelPair(su, du);
+          channel.xferListIndex = newChunkId;
+          channel.parallelism = newChunk.parallelism;
+          channel.pipelining = newChunk.pipelining;
 
+          GridFTPTransfer.setupChannelConf(channel, newChunk.parallelism, newChunk.pipelining, newChunk.bufferSize, 0,
+              channelId, channel.xferListIndex, newChunk, fileToStart);
+          updateOnAir(channel.xferListIndex, +1);
+          System.out.println("channel " + channel.id + " joined to Chunk in " + (System.currentTimeMillis() - start) + " ms");
+          for (int i = 0; i < channel.pipelining; i++) {
+            pullAndSendAFile(channel);
+          }
+          channel.isChunkChanged = false;
+
+        }
+    */
     XferList.MlsxEntry getNextFile(XferList fileList) {
       synchronized (fileList) {
         if (fileList.count() > 0) {
@@ -1403,6 +1431,7 @@ public class CooperativeModule {
           cc.setParallelism(params.getParallelism());
         cc.pipelining = params.getPipelining();
         cc.setBufferSize(params.getBufferSize());
+        System.out.println("Performance perf req " + perfFreq);
         cc.setPerfFreq(perfFreq);
         if (!cc.dc_ready) {
           if (cc.dc.local || !cc.gridftp) {
@@ -1559,6 +1588,7 @@ public class CooperativeModule {
       LOG.info("Transferring chunk " + chunk.getDensity().name() + " params:" + tunableParameters.toString() + " " + tunableParameters.getBufferSize() + " size:" + (xl.size() / (1024.0 * 1024))
           + " files:" + xl.count());
       double fileSize = xl.size();
+      xl.updateDestinationPaths();
 
       xl.channels = new LinkedList<>();
       xl.initialSize = xl.size();
@@ -1629,6 +1659,7 @@ public class CooperativeModule {
         XferList xl = chunks.get(i).getRecords();
         totalDataSize += xl.size();
         xl.initialSize = xl.size();
+        xl.updateDestinationPaths();
         xl.channels = Lists.newArrayListWithCapacity(channelAllocations[i]);
         chunks.get(i).isReadyToTransfer = true;
         client.chunks.add(chunks.get(i));
@@ -1686,9 +1717,9 @@ public class CooperativeModule {
       }
     }
 
-    public void startTransferMonitor() {
+    public void startTransferMonitor(Entry e) {
       if (transferMonitorThread == null || !transferMonitorThread.isAlive()) {
-        transferMonitorThread = new Thread(new TransferMonitor());
+        transferMonitorThread = new Thread(new TransferMonitor(e));
         transferMonitorThread.start();
       }
     }
@@ -1752,8 +1783,6 @@ public class CooperativeModule {
       }
     }
 
-    // This function implements dynamic scheduling. Dynamic scheduling is used to re-assign channels from fast
-    // chunks to slow chunks to make all run as similar pace
     public void checkIfChannelReallocationRequired(double[] estimatedCompletionTimes) {
 
       // if any channel reallocation is ongoing, then don't go for another!
@@ -1857,10 +1886,16 @@ public class CooperativeModule {
             InetAddress srcIp, dstIp;
             synchronized (sourceIpList) {
               srcIp = sourceIpList.poll();
+              while(srcIp.getCanonicalHostName().contains("ie04")) {
+                srcIp = sourceIpList.poll();
+              }
               sourceIpList.add(srcIp);
             }
             synchronized (destinationIpList) {
               dstIp = destinationIpList.poll();
+              while(dstIp.getCanonicalHostName().contains("ie04")) {
+                dstIp = destinationIpList.poll();
+              }
               destinationIpList.add(dstIp);
             }
             //long start = System.currentTimeMillis();
@@ -2085,14 +2120,51 @@ public class CooperativeModule {
     }
 
     public class TransferMonitor implements Runnable {
-      final int interval = 5000;
+      final int interval = 1000;
       int timer = 0;
       Writer writer;
+      Entry dataEntry;
+      public TransferMonitor(Entry e){
+        dataEntry = e;
+      }
+      public TransferMonitor(){
 
+      }
+      private String getServerName(String st){
+        if(st.toLowerCase().contains("stampede2")){
+          return "stampede2";
+        }else if(st.toLowerCase().contains("oasis-dm.sdsc")){
+          return "comet";
+        }else if(st.toLowerCase().contains("bridges.psc")){
+          return "psc";
+        }else if(st.toLowerCase().contains("stampede")){
+          return "stampede";
+        }else if(st.toLowerCase().contains("lsu")){
+          return "supermic";
+        }
+        else{
+          return "iu-wrangler";
+        }
+      }
       @Override
       public void run() {
         try {
-          writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("inst-throughput.txt"), "utf-8"));
+          String file_size = "1600";
+          if (dataEntry.getSource().contains("100MB")){
+            file_size = "160";
+          }else if (dataEntry.getSource().contains("1GB")){
+            file_size = "16";
+          }else if (dataEntry.getSource().contains("1MB")){
+            file_size = "1600";
+          }
+          String filename = getServerName(dataEntry.getSource())+"-"+getServerName(dataEntry.getDestination())+"-"+file_size+"-"+System.currentTimeMillis()+".log";
+          if(getServerName(dataEntry.getSource()).equalsIgnoreCase("comet") ||
+                  getServerName(dataEntry.getDestination()).equalsIgnoreCase("comet")){
+            filename = "logs/comet-transfer/" + filename;
+          }else{
+            filename = "logs/inst-throughput/" + filename;
+          }
+          writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), "utf-8"));
           initializeMonitoring();
           Thread.sleep(interval);
           while (!AdaptiveGridFTPClient.isTransferCompleted) {

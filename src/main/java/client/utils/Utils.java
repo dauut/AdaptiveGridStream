@@ -41,8 +41,10 @@ public class Utils {
     int pLevelToFillPipe = (int) Math.ceil(AdaptiveGridFTPClient.transferTask.getBDP() /
         AdaptiveGridFTPClient.transferTask.getBufferSize());
     int pLevelToFillBuffer = (int) Math.ceil(avgFileSize / AdaptiveGridFTPClient.transferTask.getBufferSize());
+    int cc = Math.min(xl.count(), AdaptiveGridFTPClient.transferTask.getMaxConcurrency());
+    /*
     int cc = Math.min(Math.min(Math.max(fileCountToFillThePipe, 2), xl.count()),
-        AdaptiveGridFTPClient.transferTask.getMaxConcurrency());
+        AdaptiveGridFTPClient.transferTask.getMaxConcurrency());*/
     int ppq = Math.min(fileCountToFillThePipe, 100);
     int p = Math.max(Math.min(pLevelToFillPipe, pLevelToFillBuffer), 1);
     p = avgFileSize > AdaptiveGridFTPClient.transferTask.getBDP() ? p : p;

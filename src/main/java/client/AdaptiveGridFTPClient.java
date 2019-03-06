@@ -34,6 +34,7 @@ public class AdaptiveGridFTPClient {
   boolean useMaxCC = false;
   private String proxyFile;
   private ChannelDistributionPolicy channelDistPolicy = ChannelDistributionPolicy.ROUND_ROBIN;
+  private boolean anonymousTransfer = false;
   private Hysterisis hysterisis;
   private GridFTPTransfer gridFTPClient;
   private boolean useHysterisis = false;
@@ -70,6 +71,10 @@ public class AdaptiveGridFTPClient {
   @VisibleForTesting
   void transfer() throws Exception {
     transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
+    String mHysterisis = useHysterisis ? "Hysterisis" : "";
+    String mDynamic = useDynamicScheduling ? "Dynamic" : "";
+    LOG.info("*************" + algorithm.name() + "************");
+    //LogManager.writeToLog("*************" + algorithm.name() + "-" + mHysterisis + "-" + mDynamic + "************" + transferTask.getMaxConcurrency(), ConfigurationParams.INFO_LOG_ID);
 
     URI su = null, du = null;
     try {
@@ -99,7 +104,6 @@ public class AdaptiveGridFTPClient {
     gridFTPClient.useDynamicScheduling = useDynamicScheduling;
     gridFTPClient.setPerfFreq(perfFreq);
     GridFTPTransfer.client.setChecksumEnabled(runChecksumControl);
-
     if (useHysterisis) {
       // this will initialize matlab connection while running hysterisis analysis
       hysterisis = new Hysterisis();
@@ -113,7 +117,6 @@ public class AdaptiveGridFTPClient {
     long datasetSize = dataset.size();
     ArrayList<Partition> chunks = partitionByFileSize(dataset, maximumChunks);
 
-    // Check if there are multiple hosts behind given hostname
     // Make sure hostname resolution operations are completed before starting to a transfer
     sourceHostResolution.join();
     destinationHostResolution.join();
@@ -132,7 +135,8 @@ public class AdaptiveGridFTPClient {
     if (useHysterisis) {
       hysterisis.findOptimalParameters(chunks, transferTask);
     }
-    gridFTPClient.startTransferMonitor();
+    gridFTPClient.startTransferMonitor(transferTask);
+
     switch (algorithm) {
       case SINGLECHUNK:
         chunks.forEach(chunk -> chunk.setTunableParameters(Utils.getBestParams(chunk.getRecords(), maximumChunks)));
@@ -400,11 +404,9 @@ public class AdaptiveGridFTPClient {
         processParameter(argument);
     }
 
-    if (proxyFile == null) {
+    if (null == proxyFile && !anonymousTransfer) {
       int uid = findUserId();
-      File x509 = new File("/tmp/x509up_u" + uid);
-      if (x509.exists())
-        this.proxyFile = x509.getAbsolutePath();
+      proxyFile = "/tmp/x509up_u" + uid;
     }
     ConfigurationParams.init();
   }
@@ -441,6 +443,10 @@ public class AdaptiveGridFTPClient {
           LOG.fatal("-spath requires spath of file/directory to be transferred");
         }
         LOG.info("proxyFile = " + proxyFile);
+        break;
+      case "-no-proxy":
+        anonymousTransfer = true;
+        usedSecondArgument = false;
         break;
       case "-bw":
       case "-bandwidth":
