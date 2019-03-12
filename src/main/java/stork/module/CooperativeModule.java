@@ -66,13 +66,13 @@ public class CooperativeModule {
       total = rem = len;
     }
 
-    public FileMap(String path, long off) throws IOException {
-      this(path, off, -1);
-    }
+//    public FileMap(String path, long off) throws IOException {
+//      this(path, off, -1);
+//    }
 
-    public FileMap(String path) throws IOException {
-      this(path, 0, -1);
-    }
+//    public FileMap(String path) throws IOException {
+//      this(path, 0, -1);
+//    }
 
     public void write(Buffer buffer) throws IOException {
       if (buffer.getOffset() >= 0) {
@@ -209,20 +209,20 @@ public class CooperativeModule {
   }
 
 
-  static class Block {
-    long off, len;
-    int para = 0, pipe = 0, conc = 0;
-    double tp = 0;  // Throughput - filled out by caller
-
-    Block(long o, long l) {
-      off = o;
-      len = l;
-    }
-
-    public String toString() {
-      return String.format("<off=%d, len=%d | sc=%d, tp=%.2f>", off, len, para, tp);
-    }
-  }
+//  static class Block {
+//    long off, len;
+//    int para = 0, pipe = 0, conc = 0;
+//    double tp = 0;  // Throughput - filled out by caller
+//
+//    Block(long o, long l) {
+//      off = o;
+//      len = l;
+//    }
+//
+//    public String toString() {
+//      return String.format("<off=%d, len=%d | sc=%d, tp=%.2f>", off, len, para, tp);
+//    }
+//  }
 
 
   private static class ControlChannel {
