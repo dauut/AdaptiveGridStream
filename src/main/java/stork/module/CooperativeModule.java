@@ -115,6 +115,8 @@ public class CooperativeModule {
     private BufferedReader br;
     private int off = 0;
 
+
+    // files in source path
     public ListSink(String base) {
       this.base = base;
       buf_list = new LinkedList<Buffer>();
