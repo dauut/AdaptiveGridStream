@@ -71,8 +71,8 @@ public class AdaptiveGridFTPClient {
     @VisibleForTesting
     void transfer() throws Exception {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
-        String mHysterisis = useHysterisis ? "Hysterisis" : "";
-        String mDynamic = useDynamicScheduling ? "Dynamic" : "";
+//        String mHysterisis = useHysterisis ? "Hysterisis" : "";
+//        String mDynamic = useDynamicScheduling ? "Dynamic" : "";
         LOG.info("*************" + algorithm.name() + "************");
         //LogManager.writeToLog("*************" + algorithm.name() + "-" + mHysterisis + "-" + mDynamic + "************" + transferTask.getMaxConcurrency(), ConfigurationParams.INFO_LOG_ID);
 
