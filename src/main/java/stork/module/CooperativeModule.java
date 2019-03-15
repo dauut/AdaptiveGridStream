@@ -36,6 +36,7 @@ import java.util.concurrent.*;
 
 import static client.utils.Utils.getChannels;
 
+@SuppressWarnings("Duplicates")
 public class CooperativeModule {
 
   private static final Log LOG = LogFactory.getLog(CooperativeModule.class);
