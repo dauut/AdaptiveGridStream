@@ -1,7 +1,7 @@
 package client.utils;
 
 import client.AdaptiveGridFTPClient;
-import stork.module.CooperativeModule;
+import stork.module.cooperative.ChannelPair;
 import stork.util.XferList;
 
 import java.io.BufferedReader;
@@ -76,7 +76,7 @@ public class Utils {
 
   public static List<Integer> getChannels(XferList xl) {
     List<Integer> list = new LinkedList<Integer>();
-    for (CooperativeModule.ChannelPair channel : xl.channels) {
+    for (ChannelPair channel : xl.channels) {
       list.add(channel.getId());
     }
     return list;

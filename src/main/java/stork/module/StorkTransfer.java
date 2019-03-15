@@ -1,6 +1,6 @@
 package stork.module;
 
-interface StorkTransfer extends Runnable {
+public interface StorkTransfer extends Runnable {
   void start();
 
   void stop();

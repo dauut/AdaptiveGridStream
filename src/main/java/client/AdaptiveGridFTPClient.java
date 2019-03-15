@@ -9,7 +9,7 @@ import client.utils.Utils.Density;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import stork.module.CooperativeModule.GridFTPTransfer;
+import stork.module.cooperative.GridFTPTransfer;
 import stork.util.XferList;
 
 import java.io.*;

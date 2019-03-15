@@ -1,6 +1,5 @@
 package client;
 
-import client.AdaptiveGridFTPClient.TransferAlgorithm;
 import client.hysterisis.Entry;
 import client.utils.Utils;
 import org.junit.After;
@@ -8,7 +7,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import stork.module.CooperativeModule.GridFTPTransfer;
+import stork.module.cooperative.GridFTPTransfer;
 import stork.module.CooperativeModule.StorkFTPClient;
 import stork.util.XferList;
 
