@@ -3,22 +3,22 @@ package stork.module.cooperative;
 import org.globus.ftp.Marker;
 import org.globus.ftp.MarkerListener;
 import org.globus.ftp.PerfMarker;
-import stork.module.CooperativeModule;
 import stork.util.TransferProgress;
 import stork.util.XferList;
 
 // Listens for markers from GridFTP servers and updates transfer
 // progress statistics accordingly.
+@SuppressWarnings("Duplicates")
 public class ProgressListener implements MarkerListener {
   public long last_bytes = 0;
   TransferProgress prog;
-  CooperativeModule.StorkFTPClient client;
+  StorkFTPClient client;
 
   public ProgressListener(TransferProgress prog) {
     this.prog = prog;
   }
 
-  public ProgressListener(CooperativeModule.StorkFTPClient client) {
+  public ProgressListener(StorkFTPClient client) {
     this.client = client;
   }
 

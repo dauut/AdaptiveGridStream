@@ -8,7 +8,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import stork.module.cooperative.GridFTPTransfer;
-import stork.module.CooperativeModule.StorkFTPClient;
+import stork.module.cooperative.StorkFTPClient;
 import stork.util.XferList;
 
 import java.util.List;

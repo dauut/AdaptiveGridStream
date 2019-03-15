@@ -30,7 +30,7 @@ import static client.utils.Utils.getChannels;
 // Transfer class
 // --------------
 public class GridFTPTransfer implements StorkTransfer {
-  public static CooperativeModule.StorkFTPClient client;
+  public static StorkFTPClient client;
   public static ExecutorService executor;
   public static Queue<InetAddress> sourceIpList = new LinkedList<>();
   public static Queue<InetAddress> destinationIpList = new LinkedList<>();
@@ -136,7 +136,7 @@ public class GridFTPTransfer implements StorkTransfer {
     // Attempt to connect to hosts.
     // TODO: Differentiate between temporary errors and fatal errors.
     try {
-      client = new CooperativeModule.StorkFTPClient(su, du);
+      client = new StorkFTPClient(su, du);
     } catch (Exception e) {
       e.printStackTrace();
       fatal("error connecting: " + e);
