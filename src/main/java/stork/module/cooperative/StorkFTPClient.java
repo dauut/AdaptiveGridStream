@@ -176,7 +176,7 @@ public class StorkFTPClient {
 
   //returns list of files to be transferred
   public XferList getListofFiles(String sp, String dp) throws Exception {
-    checkTransfer();
+    //checkTransfer();
 
     checkTransfer();
     XferList xl;
