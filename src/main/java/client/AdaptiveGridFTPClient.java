@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-
+@SuppressWarnings("Duplicates")
 public class AdaptiveGridFTPClient {
 
     private static final Log LOG = LogFactory.getLog(AdaptiveGridFTPClient.class);
@@ -41,6 +41,10 @@ public class AdaptiveGridFTPClient {
     private boolean useDynamicScheduling = false;
     private boolean runChecksumControl = false;
 
+    //
+
+    private int dataNotChangeCounter = 0;
+    private XferList the_dataset;
 
     public AdaptiveGridFTPClient() {
         // TODO Auto-generated constructor stub
@@ -60,13 +64,88 @@ public class AdaptiveGridFTPClient {
     public static void main(String[] args) throws Exception {
         AdaptiveGridFTPClient multiChunk = new AdaptiveGridFTPClient();
         multiChunk.parseArguments(args, multiChunk);
-        multiChunk.transfer();
+        multiChunk.lookForNewData();
+        XferList tmpList = multiChunk.the_dataset;
+
+
+        //
+        while (multiChunk.dataNotChangeCounter < 20) {
+            Thread t1 = new Thread(multiChunk::lookForNewData);
+            Thread.sleep(1000); //wait before next check
+            t1.start();
+            t1.join();
+            if (!multiChunk.the_dataset.equals(tmpList)) {
+                multiChunk.dataNotChangeCounter++;
+            } else {
+                System.out.println("list not same");
+            }
+        }
+
+        System.out.println("Completed");
+        //
+//        multiChunk.transfer();
     }
 
     @VisibleForTesting
     void setUseHysterisis(boolean bool) {
         useHysterisis = bool;
     }
+
+    void lookForNewData() {
+
+        transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
+//        String mHysterisis = useHysterisis ? "Hysterisis" : "";
+//        String mDynamic = useDynamicScheduling ? "Dynamic" : "";
+        LOG.info("*************" + algorithm.name() + "************");
+        //LogManager.writeToLog("*************" + algorithm.name() + "-" + mHysterisis + "-" + mDynamic + "************" + transferTask.getMaxConcurrency(), ConfigurationParams.INFO_LOG_ID);
+
+        URI su = null, du = null; //url paths
+        try {
+            su = new URI(transferTask.getSource()).normalize();
+            du = new URI(transferTask.getDestination()).normalize();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
+        HostResolution sourceHostResolution = new HostResolution(su.getHost());
+        HostResolution destinationHostResolution = new HostResolution(du.getHost());
+        sourceHostResolution.start();
+        destinationHostResolution.start();
+
+        // create Control Channel to source and destination server
+        double startTime = System.currentTimeMillis();
+        if (gridFTPClient == null) {
+            gridFTPClient = new GridFTPTransfer(proxyFile, su, du);
+            gridFTPClient.start();
+            gridFTPClient.waitFor();
+        }
+
+        //
+        if (gridFTPClient == null || GridFTPTransfer.client == null) {
+            LOG.info("Could not establish GridFTP connection. Exiting...");
+            System.exit(-1);
+        }
+        gridFTPClient.useDynamicScheduling = useDynamicScheduling;
+        gridFTPClient.setPerfFreq(perfFreq);
+        GridFTPTransfer.client.setChecksumEnabled(runChecksumControl);
+        if (useHysterisis) {
+            // this will initialize matlab connection while running hysterisis analysis
+            hysterisis = new Hysterisis();
+        }
+
+        //Get metadata information of dataset
+        XferList dataset = null;
+        try {
+            dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        the_dataset = dataset;
+
+        LOG.info("mlsr completed at:" + ((System.currentTimeMillis() - startTime) / 1000.0) + "set size:" + dataset.size());
+    }
+
 
     @VisibleForTesting
     void transfer() throws Exception {
