@@ -67,7 +67,7 @@ public class AdaptiveGridFTPClient {
     public static void main(String[] args) throws Exception {
         AdaptiveGridFTPClient multiChunk = new AdaptiveGridFTPClient();
         multiChunk.parseArguments(args, multiChunk);
-        multiChunk.lookForNewData();
+//        multiChunk.lookForNewData();
 //        multiChunk.transfer();
         multiChunk.runDataStreamData();
         System.out.println("Completed");
@@ -151,8 +151,11 @@ public class AdaptiveGridFTPClient {
 
         //Get metadata information of dataset
         XferList dataset = null;
+
         try {
-            dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath());
+
+            dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath(),the_dataset);
+
             for (int i = 0; i < dataset.getFileList().size(); i++) {
                 if (!allFiles.contains(dataset.getFileList().get(i).fileName)) {
                     allFiles.add(dataset.getFileList().get(i).fileName);
@@ -344,7 +347,7 @@ public class AdaptiveGridFTPClient {
         }
 
         //Get metadata information of dataset
-        XferList dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath());
+        XferList dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath(), the_dataset);
         LOG.info("mlsr completed at:" + ((System.currentTimeMillis() - startTime) / 1000.0) + "set size:" + dataset.size());
 
 

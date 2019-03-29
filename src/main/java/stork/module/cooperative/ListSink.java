@@ -84,7 +84,7 @@ public class ListSink extends Reader implements DataSink {
     }
 
     // Get the list from the sink as an XferList.
-    public XferList getList(String path) {
+    public XferList getList(String path, XferList prevList) {
         XferList xl = new XferList(base, "");
         String line;
 
@@ -108,5 +108,16 @@ public class ListSink extends Reader implements DataSink {
             }
         }
         return xl;
+    }
+
+    private boolean isExist(XferList prevList, String filename) {
+        boolean isExist = false;
+        int counter = 0;
+
+        while (counter < prevList.getFileList().size() && !isExist) {
+
+        }
+
+        return isExist;
     }
 }

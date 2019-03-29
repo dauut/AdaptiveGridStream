@@ -215,8 +215,8 @@ public class GridFTPTransfer implements StorkTransfer {
     return (rv >= 0) ? rv : 255;
   }
 
-  public XferList getListofFiles(String sp, String dp) throws Exception {
-    return client.getListofFiles(sp, dp);
+  public XferList getListofFiles(String sp, String dp, XferList prevList) throws Exception {
+    return client.getListofFiles(sp, dp,prevList);
   }
 
   public double runTransfer(final Partition chunk) {

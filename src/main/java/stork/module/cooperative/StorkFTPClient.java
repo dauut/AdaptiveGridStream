@@ -48,7 +48,7 @@ public class StorkFTPClient {
   }
 
   // Recursively list directories.
-  public XferList mlsr() throws Exception {
+  public XferList mlsr(XferList previousList) throws Exception {
     final String MLSR = "MLSR", MLSD = "MLSD";
     final int MAXIMUM_PIPELINING = 200;
     int currentPipelining = 0;
@@ -114,7 +114,7 @@ public class StorkFTPClient {
           continue;
         }
 
-        XferList xl = sink.getList(p);
+        XferList xl = sink.getList(p, previousList);
 
         // If we did mlsr, return the list.
         if (cmd == MLSR) {
@@ -175,7 +175,7 @@ public class StorkFTPClient {
 
 
   //returns list of files to be transferred
-  public XferList getListofFiles(String sp, String dp) throws Exception {
+  public XferList getListofFiles(String sp, String dp, XferList prevList) throws Exception {
     //checkTransfer();
 
     checkTransfer();
@@ -190,7 +190,7 @@ public class StorkFTPClient {
     // See if we're doing a directory transfer and need to build
     // a directory list.
     if (sp.endsWith("/")) {
-      xl = mlsr();
+      xl = mlsr(prevList);
       xl.dp = dp;
     } else {  // Otherwise it's just one file.
       xl = new XferList(sp, dp, size(sp));
