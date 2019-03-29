@@ -18,6 +18,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 @SuppressWarnings("Duplicates")
@@ -45,6 +46,8 @@ public class AdaptiveGridFTPClient {
 
     private int dataNotChangeCounter = 0;
     private XferList the_dataset;
+    private HashSet<String> allFiles = new HashSet<>();
+    private boolean isNewFile = false;
 
     public AdaptiveGridFTPClient() {
         // TODO Auto-generated constructor stub
@@ -65,25 +68,37 @@ public class AdaptiveGridFTPClient {
         AdaptiveGridFTPClient multiChunk = new AdaptiveGridFTPClient();
         multiChunk.parseArguments(args, multiChunk);
         multiChunk.lookForNewData();
-        XferList tmpList = multiChunk.the_dataset;
-
+//        multiChunk.transfer();
+        multiChunk.runDataStreamData();
+        System.out.println("Completed");
 
         //
-        while (multiChunk.dataNotChangeCounter < 20) {
-            Thread t1 = new Thread(multiChunk::lookForNewData);
-            Thread.sleep(1000); //wait before next check
-            t1.start();
-            t1.join();
-            if (!multiChunk.the_dataset.equals(tmpList)) {
-                multiChunk.dataNotChangeCounter++;
-            } else {
-                System.out.println("list not same");
+    }
+
+
+    void runDataStreamData() throws InterruptedException {
+        System.err.println("Run started.");
+        while (dataNotChangeCounter < 20) {
+            Thread checkData = new Thread(this::lookForNewData);
+            Thread.sleep(2000); //wait before next check
+            checkData.start();
+            checkData.join();
+
+            if (isNewFile) {
+                System.err.println("New files found. Transfer");
+                Thread transferDataThread = new Thread(() -> {
+                    try {
+                        streamTransfer();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+
+                transferDataThread.start();
+                transferDataThread.join();
             }
         }
 
-        System.out.println("Completed");
-        //
-//        multiChunk.transfer();
     }
 
     @VisibleForTesting
@@ -92,7 +107,7 @@ public class AdaptiveGridFTPClient {
     }
 
     void lookForNewData() {
-
+//        synchronized (this) {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
 //        String mHysterisis = useHysterisis ? "Hysterisis" : "";
 //        String mDynamic = useDynamicScheduling ? "Dynamic" : "";
@@ -138,14 +153,152 @@ public class AdaptiveGridFTPClient {
         XferList dataset = null;
         try {
             dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath());
+            for (int i = 0; i < dataset.getFileList().size(); i++) {
+                if (!allFiles.contains(dataset.getFileList().get(i).fileName)) {
+                    allFiles.add(dataset.getFileList().get(i).fileName);
+                    isNewFile = true;
+                    dataNotChangeCounter = 0;
+                } else {
+                    dataNotChangeCounter++;
+                    isNewFile = false;
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
         the_dataset = dataset;
 
-        LOG.info("mlsr completed at:" + ((System.currentTimeMillis() - startTime) / 1000.0) + "set size:" + dataset.size());
+//            LOG.info("mlsr completed at:" + ((System.currentTimeMillis() - startTime) / 1000.0) + "set size:" + dataset.size());
+//            try {
+//                wait();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
     }
 
+    private void streamTransfer() throws Exception {
+//        synchronized (this) {
+        transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
+        LOG.info("*************" + algorithm.name() + "************");
+
+        URI su = null, du = null; //url paths
+        try {
+            su = new URI(transferTask.getSource()).normalize();
+            du = new URI(transferTask.getDestination()).normalize();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
+        HostResolution sourceHostResolution = new HostResolution(su.getHost());
+        HostResolution destinationHostResolution = new HostResolution(du.getHost());
+        sourceHostResolution.start();
+        destinationHostResolution.start();
+
+        // create Control Channel to source and destination server
+        double startTime = System.currentTimeMillis();
+        if (gridFTPClient == null) {
+            gridFTPClient = new GridFTPTransfer(proxyFile, su, du);
+            gridFTPClient.start();
+            gridFTPClient.waitFor();
+        }
+
+        //
+        if (gridFTPClient == null || GridFTPTransfer.client == null) {
+            LOG.info("Could not establish GridFTP connection. Exiting...");
+            System.exit(-1);
+        }
+        gridFTPClient.useDynamicScheduling = useDynamicScheduling;
+        gridFTPClient.setPerfFreq(perfFreq);
+        GridFTPTransfer.client.setChecksumEnabled(runChecksumControl);
+        if (useHysterisis) {
+            // this will initialize matlab connection while running hysterisis analysis
+            hysterisis = new Hysterisis();
+        }
+
+        long datasetSize = the_dataset.size();
+        ArrayList<Partition> chunks = partitionByFileSize(the_dataset, maximumChunks);
+
+        // Make sure hostname resolution operations are completed before starting to a transfer
+        sourceHostResolution.join();
+        destinationHostResolution.join();
+        for (InetAddress inetAddress : sourceHostResolution.allIPs) {
+            if (inetAddress != null)
+                gridFTPClient.sourceIpList.add(inetAddress);
+        }
+        for (InetAddress inetAddress : destinationHostResolution.allIPs) {
+            if (inetAddress != null)
+                gridFTPClient.destinationIpList.add(inetAddress);
+        }
+
+        int[][] estimatedParamsForChunks = new int[chunks.size()][4];
+        long timeSpent = 0;
+        long start = System.currentTimeMillis();
+        if (useHysterisis) {
+            hysterisis.findOptimalParameters(chunks, transferTask);
+        }
+        gridFTPClient.startTransferMonitor(transferTask);
+
+        switch (algorithm) {
+//            case SINGLECHUNK:
+//                chunks.forEach(chunk -> chunk.setTunableParameters(Utils.getBestParams(chunk.getRecords(), maximumChunks)));
+//                if (useMaxCC) {
+//                    chunks.forEach(chunk -> chunk.getTunableParameters().setConcurrency(
+//                            Math.min(transferTask.getMaxConcurrency(), chunk.getRecords().count())));
+//                }
+//                GridFTPTransfer.executor.submit(new GridFTPTransfer.ModellingThread());
+//                chunks.forEach(chunk -> gridFTPClient.runTransfer(chunk));
+//
+//                break;
+            default:
+                // Make sure total channels count does not exceed total file count
+                int totalChannelCount = Math.min(transferTask.getMaxConcurrency(), the_dataset.count());
+                if (useHysterisis) {
+                    int maxConcurrency = 0;
+                    for (int i = 0; i < estimatedParamsForChunks.length; i++) {
+                        //chunks.get(i).getRecords().setTransferParameters(estimatedParamsForChunks[i]);
+                        if (estimatedParamsForChunks[i][0] > maxConcurrency) {
+                            maxConcurrency = estimatedParamsForChunks[i][0];
+                        }
+                    }
+                    LOG.info(" Running MC with :" + maxConcurrency + " channels.");
+                    totalChannelCount = maxConcurrency;
+                } else {
+                    for (int i = 0; i < estimatedParamsForChunks.length; i++) {
+                        chunks.get(i).setTunableParameters(Utils.getBestParams(chunks.get(i).getRecords(), maximumChunks));
+                    }
+                }
+                LOG.info(" Running MC with :" + totalChannelCount + " channels.");
+                for (Partition chunk : chunks) {
+                    LOG.info("Chunk :" + chunk.getDensity().name() + " cc:" + chunk.getTunableParameters().getConcurrency() +
+                            " p:" + chunk.getTunableParameters().getParallelism() + " ppq:" + chunk.getTunableParameters().getPipelining());
+                }
+                int[] channelAllocation = allocateChannelsToChunks(chunks, totalChannelCount);
+                start = System.currentTimeMillis();
+                gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
+                break;
+        }
+        timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
+        LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
+                        transferTask.getMaxConcurrency() + " Throughput:" + (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)),
+                ConfigurationParams.INFO_LOG_ID);
+        System.out.println(algorithm.name() + " chunks: " + maximumChunks + " Throughput:" + "size:" +
+                Utils.printSize(datasetSize, true) + " time:" + timeSpent + " thr: " +
+                (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)));
+//            notify();
+
+        if (dataNotChangeCounter >= 20) {
+            isTransferCompleted = true;
+            GridFTPTransfer.executor.shutdown();
+            while (!GridFTPTransfer.executor.isTerminated()) {
+            }
+            LogManager.close();
+            gridFTPClient.stop();
+        }
+
+//        }
+    }
 
     @VisibleForTesting
     void transfer() throws Exception {
