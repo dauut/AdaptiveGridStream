@@ -114,6 +114,7 @@ public class StorkFTPClient {
           continue;
         }
 
+        // new argument added
         XferList xl = sink.getList(p, previousList);
 
         // If we did mlsr, return the list.

@@ -43,7 +43,6 @@ public class AdaptiveGridFTPClient {
     private boolean runChecksumControl = false;
 
     //
-
     private int dataNotChangeCounter = 0;
     private XferList the_dataset;
     private HashSet<String> allFiles = new HashSet<>();

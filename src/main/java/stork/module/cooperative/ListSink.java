@@ -97,10 +97,13 @@ public class ListSink extends Reader implements DataSink {
                 String type = m.get("type");
                 String size = m.get("size");
 
-                if (type.equals(org.globus.ftp.MlsxEntry.TYPE_FILE)) {
-                    xl.add(path + fileName, Long.parseLong(size));
-                } else if (!fileName.equals(".") && !fileName.equals("..")) {
-                    xl.add(path + fileName);
+                // check if we have files previous bulk
+                if (!isExist(prevList, fileName)) {
+                    if (type.equals(org.globus.ftp.MlsxEntry.TYPE_FILE)) {
+                        xl.add(path + fileName, Long.parseLong(size));
+                    } else if (!fileName.equals(".") && !fileName.equals("..")) {
+                        xl.add(path + fileName);
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -110,12 +113,20 @@ public class ListSink extends Reader implements DataSink {
         return xl;
     }
 
+
+    // new metgod du
     private boolean isExist(XferList prevList, String filename) {
         boolean isExist = false;
         int counter = 0;
 
         while (counter < prevList.getFileList().size() && !isExist) {
 
+            if (prevList.getFileList().get(counter).fileName.equals(filename)) {
+                isExist = true;
+                counter++;
+            } else {
+                counter++;
+            }
         }
 
         return isExist;

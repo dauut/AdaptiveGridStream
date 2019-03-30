@@ -53,7 +53,7 @@ public class AdaptiveGridFTPClientTest {
 
     files = Utils.readInputFilesFromFile(AdaptiveGridFTPClientTest.class.getResourceAsStream(sampleInputFile),
             SRC_DIR, DST_DIR);
-    when(mockGridFTPClient.getListofFiles(any(String.class), any(String.class)))
+    when(mockGridFTPClient.getListofFiles(any(String.class), any(String.class),any(XferList.class)))
             .thenReturn(files);
     when(mockGridFTPClient.runTransfer(any(Partition.class)))
             .thenReturn(611.8585207)
