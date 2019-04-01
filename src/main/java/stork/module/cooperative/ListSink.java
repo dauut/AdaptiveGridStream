@@ -98,7 +98,7 @@ public class ListSink extends Reader implements DataSink {
                 String size = m.get("size");
 
                 // check if we have files previous bulk
-                if (!isExist(prevList, fileName)) {
+                if (prevList != null && !isExist(prevList, fileName)) {
                     if (type.equals(org.globus.ftp.MlsxEntry.TYPE_FILE)) {
                         xl.add(path + fileName, Long.parseLong(size));
                     } else if (!fileName.equals(".") && !fileName.equals("..")) {
