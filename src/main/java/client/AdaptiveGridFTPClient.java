@@ -128,7 +128,7 @@ public class AdaptiveGridFTPClient {
         destinationHostResolution.start();
 
         // create Control Channel to source and destination server
-        double startTime = System.currentTimeMillis();
+//        double startTime = System.currentTimeMillis();
         if (gridFTPClient == null) {
             gridFTPClient = new GridFTPTransfer(proxyFile, su, du);
             gridFTPClient.start();
