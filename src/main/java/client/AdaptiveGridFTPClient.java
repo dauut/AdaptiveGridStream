@@ -16,10 +16,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 @SuppressWarnings("Duplicates")
 public class AdaptiveGridFTPClient {
@@ -48,6 +45,7 @@ public class AdaptiveGridFTPClient {
     private HashSet<String> allFiles = new HashSet<>();
     private boolean isNewFile = false;
     private final Object lockObject = new Object();
+    private int counterOfStremTour = 0;
 
     public AdaptiveGridFTPClient() {
         // TODO Auto-generated constructor stub
@@ -100,7 +98,7 @@ public class AdaptiveGridFTPClient {
                     transferDataThread.start();
                     transferDataThread.join();
                     dataNotChangeCounter = 0;
-                }else {
+                } else {
                     dataNotChangeCounter++;
                 }
             }
@@ -172,6 +170,7 @@ public class AdaptiveGridFTPClient {
     }
 
     private void streamTransfer() throws Exception {
+        counterOfStremTour++;
 //        synchronized (this) {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
         LOG.info("*************" + algorithm.name() + "************");
@@ -209,6 +208,16 @@ public class AdaptiveGridFTPClient {
 
         long datasetSize = the_dataset.size();
         ArrayList<Partition> chunks = partitionByFileSize(the_dataset, maximumChunks);
+        System.err.println(chunks.size());
+        System.err.println(chunks.size());
+        System.err.println(chunks.size());
+        System.err.println(chunks.size());
+        System.err.println(chunks.size());
+
+
+
+
+        LOG.info("Stream Tour: " + counterOfStremTour + "; Chunk size: " + chunks.size());
 
         // Make sure hostname resolution operations are completed before starting to a transfer
         sourceHostResolution.join();
@@ -241,8 +250,6 @@ public class AdaptiveGridFTPClient {
         int[] channelAllocation = allocateChannelsToChunks(chunks, totalChannelCount);
         start = System.currentTimeMillis();
         gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
-
-
         timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
         LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
                         transferTask.getMaxConcurrency() + " Throughput:" + (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)),
