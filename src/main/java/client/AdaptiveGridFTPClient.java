@@ -69,18 +69,6 @@ public class AdaptiveGridFTPClient {
         multiChunk.parseArguments(args, multiChunk);
         multiChunk.runDataStreamData();
         multiChunk.closeConnection();
-//        multiChunk.transfer();
-//
-//        Thread closeConnection = new Thread(()-> {
-//            try {
-//                multiChunk.closeConnection();
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//        });
-//
-//        closeConnection.start();
-//        closeConnection.join();
 
         System.err.println("Completed");
 
