@@ -42,6 +42,7 @@ public class AdaptiveGridFTPClient {
     //
     private int dataNotChangeCounter = 0;
     private XferList newDataset;
+    private XferList onlyNewFilesDataset;
     private HashSet<String> allFiles = new HashSet<>();
     private boolean isNewFile = false;
     private ArrayList<Partition> tmpchunks = null;
@@ -150,7 +151,7 @@ public class AdaptiveGridFTPClient {
 
         try {
 
-            dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath(), newDataset);
+            dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath(), allFiles);
 
             for (int i = 0; i < dataset.getFileList().size(); i++) {
                 if (!allFiles.contains(dataset.getFileList().get(i).fileName)) {
@@ -427,15 +428,15 @@ public class AdaptiveGridFTPClient {
 
 
         // in case of existing chunks we'll add new files to current chunks
-        if (currentChunks != null){
-            partitions = currentChunks;
-        }else{
+//        if (currentChunks != null){
+//            partitions = currentChunks;
+//        }else{
             partitions = new ArrayList<>();
             for (int i = 0; i < maximumChunks; i++) {
                 Partition p = new Partition();
                 partitions.add(p);
             }
-        }
+//        }
 
         for (XferList.MlsxEntry e : list) {
             if (e.dir) {

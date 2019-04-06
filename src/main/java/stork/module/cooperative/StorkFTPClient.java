@@ -8,6 +8,7 @@ import stork.util.StorkUtil;
 import stork.util.TransferProgress;
 import stork.util.XferList;
 
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -48,7 +49,7 @@ public class StorkFTPClient {
   }
 
   // Recursively list directories.
-  public XferList mlsr(XferList previousList) throws Exception {
+  public XferList mlsr(HashSet previousList) throws Exception {
     final String MLSR = "MLSR", MLSD = "MLSD";
     final int MAXIMUM_PIPELINING = 200;
     int currentPipelining = 0;
@@ -176,7 +177,7 @@ public class StorkFTPClient {
 
 
   //returns list of files to be transferred
-  public XferList getListofFiles(String sp, String dp, XferList prevList) throws Exception {
+  public XferList getListofFiles(String sp, String dp, HashSet prevList) throws Exception {
     //checkTransfer();
 
     checkTransfer();

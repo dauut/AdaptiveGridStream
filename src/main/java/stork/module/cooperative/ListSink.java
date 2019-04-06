@@ -7,6 +7,7 @@ import stork.util.XferList;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 public class ListSink extends Reader implements DataSink {
@@ -84,7 +85,7 @@ public class ListSink extends Reader implements DataSink {
     }
 
     // Get the list from the sink as an XferList.
-    public XferList getList(String path, XferList prevList) {
+    public XferList getList(String path, HashSet<String> prevList) {
         XferList xl = new XferList(base, "");
         String line;
 
@@ -98,7 +99,7 @@ public class ListSink extends Reader implements DataSink {
                 String size = m.get("size");
 
                 // check if we have files previous bulk
-                if (prevList != null && !isExist(prevList, fileName)) {
+                if (prevList != null && !prevList.contains(fileName)) {
                     if (type.equals(org.globus.ftp.MlsxEntry.TYPE_FILE)) {
                         xl.add(path + fileName, Long.parseLong(size));
                     } else if (!fileName.equals(".") && !fileName.equals("..")) {

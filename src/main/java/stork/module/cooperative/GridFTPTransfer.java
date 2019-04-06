@@ -215,7 +215,7 @@ public class GridFTPTransfer implements StorkTransfer {
     return (rv >= 0) ? rv : 255;
   }
 
-  public XferList getListofFiles(String sp, String dp, XferList prevList) throws Exception {
+  public XferList getListofFiles(String sp, String dp, HashSet<String> prevList) throws Exception {
     return client.getListofFiles(sp, dp,prevList);
   }
 
