@@ -6,3 +6,5 @@ src/main/resources/log4j.properties
 src/main/resources/config2.cfg
 .settings
 venv/
+src/main/java/Test.java
+src/main/bash/tmp.sh
