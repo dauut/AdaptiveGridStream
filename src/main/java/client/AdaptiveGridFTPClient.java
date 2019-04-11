@@ -25,11 +25,11 @@ public class AdaptiveGridFTPClient {
     public static Entry transferTask;
     public static boolean useOnlineTuning = false;
     public static boolean isTransferCompleted = false;
-    TransferAlgorithm algorithm = TransferAlgorithm.MULTICHUNK;
+    private TransferAlgorithm algorithm = TransferAlgorithm.MULTICHUNK;
     public static int maximumChunks = 4;
     private int perfFreq = 3;
     public static boolean channelLevelDebug = false;
-    boolean useMaxCC = false;
+    private boolean useMaxCC = false;
     private String proxyFile;
     private ChannelDistributionPolicy channelDistPolicy = ChannelDistributionPolicy.ROUND_ROBIN;
     private boolean anonymousTransfer = false;
@@ -42,7 +42,6 @@ public class AdaptiveGridFTPClient {
     //
     private int dataNotChangeCounter = 0;
     private XferList newDataset;
-    private XferList onlyNewFilesDataset;
     private HashSet<String> allFiles = new HashSet<>();
     private boolean isNewFile = false;
     private ArrayList<Partition> tmpchunks = null;
