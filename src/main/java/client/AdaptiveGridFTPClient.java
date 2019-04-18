@@ -74,16 +74,15 @@ public class AdaptiveGridFTPClient {
 
 
     private void runDataStreamData() throws InterruptedException {
+        //synced prevent closeConection if cont.
         synchronized (this) {
             System.err.println("Run started.");
-//        synchronized (lockObject) {
             while (dataNotChangeCounter < 20) {
-                Thread.sleep(5000); //wait before next check
-                System.err.println(dataNotChangeCounter);
+                Thread.sleep(3000); //wait for 3 sec. before next check
+                System.err.println(dataNotChangeCounter); //number of try.
                 Thread checkData = new Thread(this::lookForNewData);
                 checkData.start();
                 checkData.join();
-
                 if (isNewFile) {
                     System.err.println("New files found. Transfer");
                     System.err.println(newDataset.getFileList().toString());
@@ -101,7 +100,6 @@ public class AdaptiveGridFTPClient {
                     dataNotChangeCounter++;
                 }
             }
-
             notify();
         }
     }
@@ -151,15 +149,16 @@ public class AdaptiveGridFTPClient {
         try {
 
             dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath(), allFiles);
-
-            for (int i = 0; i < dataset.getFileList().size(); i++) {
-                if (!allFiles.contains(dataset.getFileList().get(i).fileName)) {
-                    allFiles.add(dataset.getFileList().get(i).fileName);
-                    isNewFile = true;
-//                    dataNotChangeCounter = 0;
-                } else {
-//                    dataNotChangeCounter++;
-                    isNewFile = false;
+            if (dataset.getFileList().size() == 0) {
+                isNewFile = false;
+            } else {
+                for (int i = 0; i < dataset.getFileList().size(); i++) {
+                    if (!allFiles.contains(dataset.getFileList().get(i).fileName)) {
+                        allFiles.add(dataset.getFileList().get(i).fileName);
+                        isNewFile = true;
+                    } else {
+                        isNewFile = false;
+                    }
                 }
             }
         } catch (Exception e) {
@@ -207,6 +206,7 @@ public class AdaptiveGridFTPClient {
         long datasetSize = newDataset.size();
         ArrayList<Partition> chunks = partitionByFileSize(newDataset, maximumChunks, tmpchunks);
         tmpchunks = chunks;
+
         LOG.info("Chunk count = " + chunks.size());
         for (int i = 0; i < chunks.size(); i++) {
             LOG.info("Chunk" + i + " file count = " + chunks.get(i).getRecords().getFileList().size());
@@ -427,15 +427,15 @@ public class AdaptiveGridFTPClient {
 
 
         // in case of existing chunks we'll add new files to current chunks
-//        if (currentChunks != null){
-//            partitions = currentChunks;
-//        }else{
+        if (currentChunks != null) {
+            partitions = currentChunks;
+        } else {
             partitions = new ArrayList<>();
             for (int i = 0; i < maximumChunks; i++) {
                 Partition p = new Partition();
                 partitions.add(p);
             }
-//        }
+        }
 
         for (XferList.MlsxEntry e : list) {
             if (e.dir) {
@@ -464,6 +464,7 @@ public class AdaptiveGridFTPClient {
                     + " \t total:" + Utils.printSize(partitions.get(i).getRecords().size(), true) + " Density:" +
                     chunk.getDensity());
         }
+
         return partitions;
     }
 
