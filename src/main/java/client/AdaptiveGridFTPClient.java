@@ -147,8 +147,9 @@ public class AdaptiveGridFTPClient {
         XferList dataset = null;
 
         try {
-
+            // check data
             dataset = gridFTPClient.getListofFiles(su.getPath(), du.getPath(), allFiles);
+            //if there is data then cont.
             if (dataset.getFileList().size() == 0) {
                 isNewFile = false;
             } else {
@@ -164,11 +165,10 @@ public class AdaptiveGridFTPClient {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        newDataset = dataset;
+        newDataset = dataset; // assign most recent dataset
     }
 
     private void streamTransfer() throws Exception {
-//        synchronized (this) {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
         LOG.info("*************" + algorithm.name() + "************");
 
@@ -204,6 +204,7 @@ public class AdaptiveGridFTPClient {
         GridFTPTransfer.client.setChecksumEnabled(runChecksumControl);
 
         long datasetSize = newDataset.size();
+        // create chunks with new data
         ArrayList<Partition> chunks = partitionByFileSize(newDataset, maximumChunks, tmpchunks);
         tmpchunks = chunks;
 
@@ -424,11 +425,11 @@ public class AdaptiveGridFTPClient {
         list.shuffle();
 
         ArrayList<Partition> partitions;
-
-
+        boolean firstPass = true;
         // in case of existing chunks we'll add new files to current chunks
         if (currentChunks != null) {
             partitions = currentChunks;
+            firstPass = false;
         } else {
             partitions = new ArrayList<>();
             for (int i = 0; i < maximumChunks; i++) {
@@ -442,6 +443,23 @@ public class AdaptiveGridFTPClient {
                 continue;
             }
             Density density = Utils.findDensityOfFile(e.size(), transferTask.getBandwidth(), maximumChunks);
+            //*****
+//            int counter = 0;
+//            boolean isSizeExist = false;
+//            if (!firstPass && partitions.get(counter).getDensity()!= null) {
+//                while (counter < partitions.size()) {
+//                    if (!partitions.get(counter).getDensity().name().equals(density.name())) {
+//                        counter++;
+//                    } else {
+//                        isSizeExist = true;
+//                        counter=partitions.size();
+//                    }
+//                }
+//                if (!isSizeExist) {
+//                    partitions = reOrderChunks(partitions, maximumChunks - partitions.size());
+//                }
+//            }
+            //******
             partitions.get(density.ordinal()).addRecord(e);
         }
 
@@ -468,9 +486,39 @@ public class AdaptiveGridFTPClient {
         return partitions;
     }
 
+    private ArrayList<Partition> reOrderChunks(ArrayList<Partition> partitions, int chunkAmount){
+        ArrayList<Partition> newChunk = new ArrayList<>();
+
+        for (int i = 0; i < chunkAmount; i++ ){
+            Partition p = new Partition();
+            newChunk.add(p);
+        }
+
+        for (int i = 0; i < partitions.size(); i++){
+            switch (partitions.get(i).getDensity().name()){
+                case "SMALL":
+                    newChunk.add(0,partitions.get(i));
+                    break;
+                case "LARGE":
+                    newChunk.add(1,partitions.get(i));
+                    break;
+                case "MEDIUM":
+                    newChunk.add(2,partitions.get(i));
+                    break;
+                case "HUGE":
+                    newChunk.add(3,partitions.get(i));
+                    break;
+            }
+        }
+
+        return newChunk;
+
+    }
+
     private ArrayList<Partition> mergePartitions(ArrayList<Partition> partitions) {
         for (int i = 0; i < partitions.size(); i++) {
             Partition p = partitions.get(i);
+
             //merge small chunk with the the chunk with closest centroid
             if ((p.getRecords().count() < 2 || p.getRecords().size() < 5 * transferTask.getBDP()) && partitions.size() > 1) {
                 int index = -1;
