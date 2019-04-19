@@ -78,7 +78,7 @@ public class AdaptiveGridFTPClient {
         synchronized (this) {
             System.err.println("Run started.");
             while (dataNotChangeCounter < 20) {
-                Thread.sleep(3000); //wait for 3 sec. before next check
+                Thread.sleep(10000); //wait for X sec. before next check
                 System.err.println(dataNotChangeCounter); //number of try.
                 Thread checkData = new Thread(this::lookForNewData);
                 checkData.start();
