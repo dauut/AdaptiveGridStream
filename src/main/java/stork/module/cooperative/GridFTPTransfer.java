@@ -292,6 +292,8 @@ public class GridFTPTransfer implements StorkTransfer {
 
   public void runMultiChunkTransfer(List<Partition> chunks, int[] channelAllocations) throws Exception {
     int totalChannels = 0;
+
+    //channel allocation
     for (int channelAllocation : channelAllocations)
       totalChannels += channelAllocation;
     int totalChunks = chunks.size();
@@ -304,7 +306,7 @@ public class GridFTPTransfer implements StorkTransfer {
       xl.updateDestinationPaths();
       xl.channels = Lists.newArrayListWithCapacity(channelAllocations[i]);
       chunks.get(i).isReadyToTransfer = true;
-      client.chunks.add(chunks.get(i));
+      client.chunks.add(chunks.get(i));  //add chunks for transferring
     }
 
     // Reserve one file for each chunk before initiating channels otherwise

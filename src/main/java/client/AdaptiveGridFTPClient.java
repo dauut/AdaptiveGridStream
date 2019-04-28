@@ -255,9 +255,6 @@ public class AdaptiveGridFTPClient {
         });
 
         runMultiChunkThread.start();
-//        runMultiChunkThread.join();
-
-//        gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
 
         timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
         LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
@@ -460,6 +457,8 @@ public class AdaptiveGridFTPClient {
 //                }
 //            }
             //******
+
+            //TODO fix removed chunks
             partitions.get(density.ordinal()).addRecord(e);
         }
 
