@@ -218,7 +218,7 @@ public class GridFTPTransfer implements StorkTransfer {
   public XferList getListofFiles(String sp, String dp, HashSet<String> prevList) throws Exception {
     return client.getListofFiles(sp, dp,prevList);
   }
-
+/*
   public double runTransfer(final Partition chunk) {
 
     // Set full destination spath of files
@@ -283,6 +283,7 @@ public class GridFTPTransfer implements StorkTransfer {
     client.ccs.clear();
     return throughput;
   }
+  */
 
   public XferList.MlsxEntry synchronizedPop(List<XferList.MlsxEntry> fileList) {
     synchronized (fileList) {
@@ -311,7 +312,7 @@ public class GridFTPTransfer implements StorkTransfer {
 
     // Reserve one file for each chunk before initiating channels otherwise
     // pipelining may cause assigning all chunks to one channel.
-    List<List<XferList.MlsxEntry>> firstFilesToSend = new ArrayList<List<XferList.MlsxEntry>>();
+    List<List<XferList.MlsxEntry>> firstFilesToSend = new ArrayList<>();
     for (int i = 0; i < totalChunks; i++) {
       List<XferList.MlsxEntry> files = Lists.newArrayListWithCapacity(channelAllocations[i]);
       //setup channels for each chunk

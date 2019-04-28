@@ -64,44 +64,45 @@ public class AdaptiveGridFTPClient {
     public static void main(String[] args) throws Exception {
         AdaptiveGridFTPClient multiChunk = new AdaptiveGridFTPClient();
         multiChunk.parseArguments(args, multiChunk);
-        multiChunk.runDataStreamData();
-        multiChunk.closeConnection();
-
+        multiChunk.checkNewData();
+        multiChunk.streamTransfer();
+//        multiChunk.closeConnection();
         System.err.println("Completed");
-
-
     }
 
 
-    private void runDataStreamData() throws InterruptedException {
+    private boolean checkNewData() throws InterruptedException {
         //synced prevent closeConection if cont.
-        synchronized (this) {
-            System.err.println("Run started.");
-            while (dataNotChangeCounter < 20) {
-                Thread.sleep(10000); //wait for X sec. before next check
-                System.err.println(dataNotChangeCounter); //number of try.
-                Thread checkData = new Thread(this::lookForNewData);
-                checkData.start();
-                checkData.join();
-                if (isNewFile) {
-                    System.err.println("New files found. Transfer");
-                    System.err.println(newDataset.getFileList().toString());
-                    Thread transferDataThread = new Thread(() -> {
-                        try {
-                            streamTransfer();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
-                    transferDataThread.start();
-                    transferDataThread.join();
-                    dataNotChangeCounter = 0;
-                } else {
-                    dataNotChangeCounter++;
-                }
+//        synchronized (this) {
+        System.err.println("Run started.");
+        while (dataNotChangeCounter < 20) {
+            Thread.sleep(20000); //wait for X sec. before next check
+            System.err.println(dataNotChangeCounter); //number of try.
+            Thread checkData = new Thread(this::lookForNewData);
+            checkData.start();
+            checkData.join();
+            if (isNewFile) {
+                dataNotChangeCounter = 0;
+                return isNewFile;
+//                System.err.println("New files found. Transfer");
+//                System.err.println(newDataset.getFileList().toString());
+//                Thread transferDataThread = new Thread(() -> {
+//                    try {
+//                        streamTransfer();
+//                    } catch (Exception e) {
+//                        e.printStackTrace();
+//                    }
+//                });
+//                transferDataThread.start();
+//                transferDataThread.join();
+//                dataNotChangeCounter = 0;
+            } else {
+                dataNotChangeCounter++;
             }
-            notify();
         }
+        return isNewFile;
+//            notify();
+//        }
     }
 
 //    @VisibleForTesting
@@ -245,16 +246,17 @@ public class AdaptiveGridFTPClient {
         start = System.currentTimeMillis();
 
 
-        Thread runMultiChunkThread = new Thread(() -> {
-            try {
-                gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+//        Thread runMultiChunkThread = new Thread(() -> {
+//            try {
+//                gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//
+//        });
+        gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
 
-        });
-
-        runMultiChunkThread.start();
+//        runMultiChunkThread.start();
 
         timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
         LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
@@ -276,6 +278,8 @@ public class AdaptiveGridFTPClient {
 //        }
     }
 
+
+/*
     private void closeConnection() throws InterruptedException {
         System.err.println("No new data: Connection closing...");
         Thread.sleep(2000);
@@ -289,7 +293,7 @@ public class AdaptiveGridFTPClient {
             gridFTPClient.stop();
         }
     }
-
+*/
 //    @VisibleForTesting
 //    void transfer() throws Exception {
 //        transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
@@ -485,27 +489,27 @@ public class AdaptiveGridFTPClient {
         return partitions;
     }
 
-    private ArrayList<Partition> reOrderChunks(ArrayList<Partition> partitions, int chunkAmount){
+    private ArrayList<Partition> reOrderChunks(ArrayList<Partition> partitions, int chunkAmount) {
         ArrayList<Partition> newChunk = new ArrayList<>();
 
-        for (int i = 0; i < chunkAmount; i++ ){
+        for (int i = 0; i < chunkAmount; i++) {
             Partition p = new Partition();
             newChunk.add(p);
         }
 
-        for (int i = 0; i < partitions.size(); i++){
-            switch (partitions.get(i).getDensity().name()){
+        for (int i = 0; i < partitions.size(); i++) {
+            switch (partitions.get(i).getDensity().name()) {
                 case "SMALL":
-                    newChunk.add(0,partitions.get(i));
+                    newChunk.add(0, partitions.get(i));
                     break;
                 case "LARGE":
-                    newChunk.add(1,partitions.get(i));
+                    newChunk.add(1, partitions.get(i));
                     break;
                 case "MEDIUM":
-                    newChunk.add(2,partitions.get(i));
+                    newChunk.add(2, partitions.get(i));
                     break;
                 case "HUGE":
-                    newChunk.add(3,partitions.get(i));
+                    newChunk.add(3, partitions.get(i));
                     break;
             }
         }
