@@ -66,6 +66,7 @@ public class AdaptiveGridFTPClient {
         multiChunk.parseArguments(args, multiChunk);
         multiChunk.checkNewData();
         multiChunk.streamTransfer();
+
 //        multiChunk.closeConnection();
         System.err.println("Completed");
     }
@@ -444,25 +445,6 @@ public class AdaptiveGridFTPClient {
                 continue;
             }
             Density density = Utils.findDensityOfFile(e.size(), transferTask.getBandwidth(), maximumChunks);
-            //*****
-//            int counter = 0;
-//            boolean isSizeExist = false;
-//            if (!firstPass && partitions.get(counter).getDensity()!= null) {
-//                while (counter < partitions.size()) {
-//                    if (!partitions.get(counter).getDensity().name().equals(density.name())) {
-//                        counter++;
-//                    } else {
-//                        isSizeExist = true;
-//                        counter=partitions.size();
-//                    }
-//                }
-//                if (!isSizeExist) {
-//                    partitions = reOrderChunks(partitions, maximumChunks - partitions.size());
-//                }
-//            }
-            //******
-
-            //TODO fix removed chunks
             partitions.get(density.ordinal()).addRecord(e);
         }
 
