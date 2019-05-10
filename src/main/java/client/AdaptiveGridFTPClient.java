@@ -73,8 +73,6 @@ public class AdaptiveGridFTPClient {
 
 
     private boolean checkNewData() throws InterruptedException {
-        //synced prevent closeConection if cont.
-//        synchronized (this) {
         System.err.println("Run started.");
         while (dataNotChangeCounter < 20) {
             Thread.sleep(20000); //wait for X sec. before next check
@@ -85,25 +83,11 @@ public class AdaptiveGridFTPClient {
             if (isNewFile) {
                 dataNotChangeCounter = 0;
                 return isNewFile;
-//                System.err.println("New files found. Transfer");
-//                System.err.println(newDataset.getFileList().toString());
-//                Thread transferDataThread = new Thread(() -> {
-//                    try {
-//                        streamTransfer();
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                    }
-//                });
-//                transferDataThread.start();
-//                transferDataThread.join();
-//                dataNotChangeCounter = 0;
             } else {
                 dataNotChangeCounter++;
             }
         }
         return isNewFile;
-//            notify();
-//        }
     }
 
 //    @VisibleForTesting
@@ -111,7 +95,7 @@ public class AdaptiveGridFTPClient {
 //        useHysterisis = bool;
 //    }
 
-    private void lookForNewData() {
+    public XferList lookForNewData() {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
         LOG.info("*************" + algorithm.name() + "************");
 
@@ -168,6 +152,7 @@ public class AdaptiveGridFTPClient {
             e.printStackTrace();
         }
         newDataset = dataset; // assign most recent dataset
+        return newDataset;
     }
 
     private void streamTransfer() throws Exception {

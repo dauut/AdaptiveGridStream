@@ -345,10 +345,19 @@ public class GridFTPTransfer implements StorkTransfer {
     double thr = totalDataSize * 8 / ((finish - start) / 1000.0);
     CooperativeModule.LOG.info(" Time:" + ((finish - start) / 1000.0) + " sec Thr:" + (thr / (1000 * 1000)));
     // Close channels
-    futures.clear();
+    /*futures.clear();
     client.ccs.forEach(cp -> cp.close());
     client.ccs.clear();
+     */
+
   }
+
+
+
+  private void checkNewData(){
+
+  }
+
 
   private void initializeMonitoring() {
     for (int i = 0; i < client.chunks.size(); i++) {
