@@ -46,6 +46,8 @@ public class AdaptiveGridFTPClient {
     private boolean isNewFile = false;
     private ArrayList<Partition> tmpchunks = null;
 
+    public ArrayList<Partition> chunks;
+
     public AdaptiveGridFTPClient() {
         // TODO Auto-generated constructor stub
         //initialize output streams for message logging
@@ -87,6 +89,15 @@ public class AdaptiveGridFTPClient {
                 dataNotChangeCounter++;
             }
         }
+        XferList newFiles = lookForNewData();
+        ArrayList<Partition>  newChunks = partitionByFileSize(newDataset, maximumChunks, tmpchunks);
+
+        synchronized (chunks.get(0).getRecords()) {
+            chunks.get(0).getRecords().addAll(newChunks.get(0).getRecords());
+        }
+        synchronized (chunks.get(0).getRecords()) {
+            chunks.get(0).getRecords().addAll(newChunks.get(0).getRecords());
+        }
         return isNewFile;
     }
 
@@ -107,8 +118,8 @@ public class AdaptiveGridFTPClient {
             e.printStackTrace();
             System.exit(-1);
         }
-
-        HostResolution sourceHostResolution = new HostResolution(su.getHost());
+//UNNCESSARY
+      /*  HostResolution sourceHostResolution = new HostResolution(su.getHost());
         HostResolution destinationHostResolution = new HostResolution(du.getHost());
         sourceHostResolution.start();
         destinationHostResolution.start();
@@ -130,6 +141,9 @@ public class AdaptiveGridFTPClient {
         GridFTPTransfer.client.setChecksumEnabled(runChecksumControl);
 
         //Get metadata information of dataset
+
+       */
+//UNNCESSARY
         XferList dataset = null;
 
         try {
@@ -192,7 +206,7 @@ public class AdaptiveGridFTPClient {
 
         long datasetSize = newDataset.size();
         // create chunks with new data
-        ArrayList<Partition> chunks = partitionByFileSize(newDataset, maximumChunks, tmpchunks);
+        chunks = partitionByFileSize(newDataset, maximumChunks, tmpchunks);
         tmpchunks = chunks;
 
         LOG.info("Chunk count = " + chunks.size());
