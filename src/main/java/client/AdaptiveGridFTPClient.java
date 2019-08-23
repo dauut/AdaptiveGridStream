@@ -44,9 +44,11 @@ public class AdaptiveGridFTPClient {
     private XferList newDataset;
     private HashSet<String> allFiles = new HashSet<>();
     private boolean isNewFile = false;
+    private boolean isNewFile2 = true;
     private ArrayList<Partition> tmpchunks = null;
 
     public ArrayList<Partition> chunks;
+    private static int dataCheckCounter = 0;
 
     public AdaptiveGridFTPClient() {
         // TODO Auto-generated constructor stub
@@ -69,13 +71,28 @@ public class AdaptiveGridFTPClient {
         multiChunk.checkNewData();
         multiChunk.streamTransfer();
 
+        Thread checkDataPeriodically = new Thread(() -> {
+            try {
+                multiChunk.checkNewData();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        while(multiChunk.isNewFile2){
+            Thread.sleep(20000);
+            checkDataPeriodically.run();
+            checkDataPeriodically.join();
+        }
+
 //        multiChunk.closeConnection();
         System.err.println("Completed");
     }
 
 
     private boolean checkNewData() throws InterruptedException {
-        System.err.println("Run started.");
+        dataCheckCounter++;
+        System.err.println("checking new data. Counter = " + dataCheckCounter);
         while (dataNotChangeCounter < 20) {
             Thread.sleep(20000); //wait for X sec. before next check
             System.err.println(dataNotChangeCounter); //number of try.
@@ -90,7 +107,7 @@ public class AdaptiveGridFTPClient {
             }
         }
         XferList newFiles = lookForNewData();
-        ArrayList<Partition>  newChunks = partitionByFileSize(newDataset, maximumChunks, tmpchunks);
+        ArrayList<Partition>  newChunks = partitionByFileSize(newFiles, maximumChunks, tmpchunks);
 
         synchronized (chunks.get(0).getRecords()) {
             chunks.get(0).getRecords().addAll(newChunks.get(0).getRecords());
@@ -101,10 +118,6 @@ public class AdaptiveGridFTPClient {
         return isNewFile;
     }
 
-//    @VisibleForTesting
-//    void setUseHysterisis(boolean bool) {
-//        useHysterisis = bool;
-//    }
 
     public XferList lookForNewData() {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
@@ -119,7 +132,7 @@ public class AdaptiveGridFTPClient {
             System.exit(-1);
         }
 //UNNCESSARY
-      /*  HostResolution sourceHostResolution = new HostResolution(su.getHost());
+      HostResolution sourceHostResolution = new HostResolution(su.getHost());
         HostResolution destinationHostResolution = new HostResolution(du.getHost());
         sourceHostResolution.start();
         destinationHostResolution.start();
@@ -141,8 +154,6 @@ public class AdaptiveGridFTPClient {
         GridFTPTransfer.client.setChecksumEnabled(runChecksumControl);
 
         //Get metadata information of dataset
-
-       */
 //UNNCESSARY
         XferList dataset = null;
 
@@ -254,6 +265,9 @@ public class AdaptiveGridFTPClient {
 //            }
 //
 //        });
+
+
+
         gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
 
 //        runMultiChunkThread.start();
