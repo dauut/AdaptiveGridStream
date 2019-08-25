@@ -78,8 +78,8 @@ public class AdaptiveGridFTPClient {
                 e.printStackTrace();
             }
         });
-        int i=0;
-        while(i < 100000){
+        int i = 0;
+        while (i < 100000) {
 //            if (multiChunk.isNewFile) {
 //                multiChunk.addNewFilesToChunks();
 //            }
@@ -176,7 +176,8 @@ public class AdaptiveGridFTPClient {
         addNewFilesToChunks();
         return newDataset;
     }
-    private void addNewFilesToChunks(){
+
+    private void addNewFilesToChunks() {
         XferList newFiles = newDataset;
         ArrayList<Partition> newChunks = partitionByFileSize(newFiles, maximumChunks, tmpchunks);
 
@@ -184,11 +185,13 @@ public class AdaptiveGridFTPClient {
             chunks.get(0).getRecords().addNewFilesToChunk(newChunks.get(0).getRecords());
         }
 
-//        if (chunks.size() > 0)
-//        synchronized (chunks.get(1).getRecords()) {
-//            chunks.get(1).getRecords().addAll(newChunks.get(1).getRecords());
-//        }
+        if (chunks.size() > 0) {
+            synchronized (chunks.get(1).getRecords()) {
+                chunks.get(1).getRecords().addAll(newChunks.get(1).getRecords());
+            }
+        }
     }
+
     private void streamTransfer() throws Exception {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
         LOG.info("*************" + algorithm.name() + "************");
@@ -265,18 +268,7 @@ public class AdaptiveGridFTPClient {
         int[] channelAllocation = allocateChannelsToChunks(chunks, totalChannelCount);
         start = System.currentTimeMillis();
 
-
-//        Thread runMultiChunkThread = new Thread(() -> {
-//            try {
-//                gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//
-//        });
         gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
-
-//        runMultiChunkThread.start();
 
         timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
         LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
