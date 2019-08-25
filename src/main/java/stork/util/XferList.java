@@ -22,6 +22,10 @@ public class XferList implements Iterable<XferList.MlsxEntry> {
   private long size = 0;
   private int count = 0;  // Number of files (not dirs)
 
+  //////
+  private Set<String> allFilesInChunk = new HashSet<>();
+
+
   // Create an XferList for a directory.
   public XferList(String src, String dest) {
     if (!src.endsWith("/")) {
@@ -71,10 +75,43 @@ public class XferList implements Iterable<XferList.MlsxEntry> {
   public void addAll(XferList ol) {
     size += ol.size;
     count += ol.count;
-    for (MlsxEntry e : ol)
-      list.add(e);
-    //list.addAll(ol.list);
+    for (MlsxEntry e : ol) {
+//      list.add(e);
+      allFilesInChunk.add(e.fileName);
+    }
+    list.addAll(ol.list);
   }
+
+  public void addNewFilesToChunk(XferList ol) {
+    size += ol.size;
+//    count += ol.count;
+
+    LinkedList<MlsxEntry> tmpList = new LinkedList<>();
+
+    if (list.size()>0){
+
+      for (int i = 0; i < ol.list.size(); i++) {
+
+        if (allFilesInChunk.contains(ol.list.get(i).fileName)){
+          tmpList.add(ol.list.get(i));
+          count += ol.count;
+        }
+
+
+//      for (int i = 0; i < list.size(); i++){
+//        for (int j = 0; j < ol.getFileList().size();j++){
+//          if (!list.get(i).fileName.equals(ol.getFileList().get(j).fileName)){
+//            tmpList.add();
+//          }
+//        }
+      }
+      list.addAll(tmpList);
+
+    }else{
+      list.addAll(ol.list);
+    }
+  }
+
 
   public long size() {
     return size;

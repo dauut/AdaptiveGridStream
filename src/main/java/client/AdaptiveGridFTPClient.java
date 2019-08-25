@@ -9,6 +9,7 @@ import client.utils.Utils.Density;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.globus.ftp.MlsxEntry;
 import stork.module.cooperative.GridFTPTransfer;
 import stork.util.XferList;
 
@@ -18,7 +19,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 
-@SuppressWarnings("Duplicates")
+//@SuppressWarnings("Duplicates")
 public class AdaptiveGridFTPClient {
 
     private static final Log LOG = LogFactory.getLog(AdaptiveGridFTPClient.class);
@@ -44,7 +45,6 @@ public class AdaptiveGridFTPClient {
     private XferList newDataset;
     private HashSet<String> allFiles = new HashSet<>();
     private boolean isNewFile = false;
-    private boolean isNewFile2 = true;
     private ArrayList<Partition> tmpchunks = null;
 
     public ArrayList<Partition> chunks;
@@ -78,15 +78,19 @@ public class AdaptiveGridFTPClient {
                 e.printStackTrace();
             }
         });
-
-        while(multiChunk.isNewFile2){
-            Thread.sleep(20000);
+        int i=0;
+        while(i < 100000){
+//            if (multiChunk.isNewFile) {
+//                multiChunk.addNewFilesToChunks();
+//            }
+            Thread.sleep(5000);
             checkDataPeriodically.run();
             checkDataPeriodically.join();
+            i++;
         }
 
 //        multiChunk.closeConnection();
-        System.err.println("Completed");
+//        System.err.println("Completed");
     }
 
 
@@ -94,7 +98,7 @@ public class AdaptiveGridFTPClient {
         dataCheckCounter++;
         System.err.println("checking new data. Counter = " + dataCheckCounter);
         while (dataNotChangeCounter < 20) {
-            Thread.sleep(20000); //wait for X sec. before next check
+            Thread.sleep(5000); //wait for X sec. before next check
             System.err.println(dataNotChangeCounter); //number of try.
             Thread checkData = new Thread(this::lookForNewData);
             checkData.start();
@@ -106,20 +110,11 @@ public class AdaptiveGridFTPClient {
                 dataNotChangeCounter++;
             }
         }
-        XferList newFiles = lookForNewData();
-        ArrayList<Partition>  newChunks = partitionByFileSize(newFiles, maximumChunks, tmpchunks);
-
-        synchronized (chunks.get(0).getRecords()) {
-            chunks.get(0).getRecords().addAll(newChunks.get(0).getRecords());
-        }
-        synchronized (chunks.get(0).getRecords()) {
-            chunks.get(0).getRecords().addAll(newChunks.get(0).getRecords());
-        }
         return isNewFile;
     }
 
 
-    public XferList lookForNewData() {
+    private XferList lookForNewData() {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
         LOG.info("*************" + algorithm.name() + "************");
 
@@ -132,7 +127,8 @@ public class AdaptiveGridFTPClient {
             System.exit(-1);
         }
 //UNNCESSARY
-      HostResolution sourceHostResolution = new HostResolution(su.getHost());
+
+        HostResolution sourceHostResolution = new HostResolution(su.getHost());
         HostResolution destinationHostResolution = new HostResolution(du.getHost());
         sourceHostResolution.start();
         destinationHostResolution.start();
@@ -177,9 +173,22 @@ public class AdaptiveGridFTPClient {
             e.printStackTrace();
         }
         newDataset = dataset; // assign most recent dataset
+        addNewFilesToChunks();
         return newDataset;
     }
+    private void addNewFilesToChunks(){
+        XferList newFiles = newDataset;
+        ArrayList<Partition> newChunks = partitionByFileSize(newFiles, maximumChunks, tmpchunks);
 
+        synchronized (chunks.get(0).getRecords()) {
+            chunks.get(0).getRecords().addNewFilesToChunk(newChunks.get(0).getRecords());
+        }
+
+//        if (chunks.size() > 0)
+//        synchronized (chunks.get(1).getRecords()) {
+//            chunks.get(1).getRecords().addAll(newChunks.get(1).getRecords());
+//        }
+    }
     private void streamTransfer() throws Exception {
         transferTask.setBDP((transferTask.getBandwidth() * transferTask.getRtt()) / 8); // In MB
         LOG.info("*************" + algorithm.name() + "************");
@@ -265,9 +274,6 @@ public class AdaptiveGridFTPClient {
 //            }
 //
 //        });
-
-
-
         gridFTPClient.runMultiChunkTransfer(chunks, channelAllocation);
 
 //        runMultiChunkThread.start();
