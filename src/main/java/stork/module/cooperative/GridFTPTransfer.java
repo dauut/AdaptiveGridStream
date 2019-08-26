@@ -352,13 +352,6 @@ public class GridFTPTransfer implements StorkTransfer {
 
   }
 
-
-
-  private void checkNewData(){
-
-  }
-
-
   private void initializeMonitoring() {
     for (int i = 0; i < client.chunks.size(); i++) {
       if (client.chunks.get(i).isReadyToTransfer) {

@@ -7,6 +7,7 @@ import client.log.LogManager;
 import client.utils.Utils;
 import client.utils.Utils.Density;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.axis.Part;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.globus.ftp.MlsxEntry;
@@ -185,7 +186,7 @@ public class AdaptiveGridFTPClient {
             chunks.get(0).getRecords().addNewFilesToChunk(newChunks.get(0).getRecords());
         }
 
-        if (chunks.size() > 0) {
+        if (chunks.size() > 1) {
             synchronized (chunks.get(1).getRecords()) {
                 chunks.get(1).getRecords().addAll(newChunks.get(1).getRecords());
             }
@@ -438,11 +439,9 @@ public class AdaptiveGridFTPClient {
         list.shuffle();
 
         ArrayList<Partition> partitions;
-        boolean firstPass = true;
         // in case of existing chunks we'll add new files to current chunks
         if (currentChunks != null) {
             partitions = currentChunks;
-            firstPass = false;
         } else {
             partitions = new ArrayList<>();
             for (int i = 0; i < maximumChunks; i++) {
@@ -456,7 +455,14 @@ public class AdaptiveGridFTPClient {
                 continue;
             }
             Density density = Utils.findDensityOfFile(e.size(), transferTask.getBandwidth(), maximumChunks);
-            partitions.get(density.ordinal()).addRecord(e);
+            try {
+                partitions.get(density.ordinal()).addRecord(e);
+            }catch (IndexOutOfBoundsException ex){
+                ex.printStackTrace();
+                Partition p2 = new Partition();
+                partitions.add(p2);
+                partitions.get(density.ordinal()).addRecord(e);
+            }
         }
 
         Collections.sort(partitions);
