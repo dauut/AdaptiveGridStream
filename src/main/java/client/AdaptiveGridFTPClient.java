@@ -45,11 +45,11 @@ public class AdaptiveGridFTPClient {
     private int dataNotChangeCounter = 0;
     private XferList newDataset;
     private HashSet<String> allFiles = new HashSet<>();
-    private boolean isNewFile = false;
+    public boolean isNewFile = false;
     private ArrayList<Partition> tmpchunks = null;
-
     public ArrayList<Partition> chunks;
     private static int dataCheckCounter = 0;
+    public static int CHANNEL_COUNT = 10;
 
     public AdaptiveGridFTPClient() {
         // TODO Auto-generated constructor stub
@@ -93,7 +93,6 @@ public class AdaptiveGridFTPClient {
 //        multiChunk.closeConnection();
 //        System.err.println("Completed");
     }
-
 
     private boolean checkNewData() throws InterruptedException {
         dataCheckCounter++;
@@ -173,8 +172,9 @@ public class AdaptiveGridFTPClient {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        newDataset = dataset; // assign most recent dataset
-        addNewFilesToChunks();
+        newDataset = dataset; // assign most recent datasetkk
+        if (isNewFile)
+            addNewFilesToChunks();
         return newDataset;
     }
 
@@ -257,6 +257,7 @@ public class AdaptiveGridFTPClient {
 
         // Make sure total channels count does not exceed total file count
         int totalChannelCount = Math.min(transferTask.getMaxConcurrency(), newDataset.count());
+//        int totalChannelCount = CHANNEL_COUNT;
 
         for (int i = 0; i < estimatedParamsForChunks.length; i++) {
             chunks.get(i).setTunableParameters(Utils.getBestParams(chunks.get(i).getRecords(), maximumChunks));
@@ -290,7 +291,6 @@ public class AdaptiveGridFTPClient {
 
 //        }
     }
-
 
 /*
     private void closeConnection() throws InterruptedException {

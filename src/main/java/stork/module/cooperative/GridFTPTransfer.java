@@ -300,6 +300,8 @@ public class GridFTPTransfer implements StorkTransfer {
     int totalChunks = chunks.size();
 
     long totalDataSize = 0;
+
+    //chunk parameters gathering
     for (int i = 0; i < totalChunks; i++) {
       XferList xl = chunks.get(i).getRecords();
       totalDataSize += xl.size();
@@ -528,6 +530,11 @@ public class GridFTPTransfer implements StorkTransfer {
       int trial = 0;
       while (!success && trial < 3) {
         try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        try {
           // Channel zero is main channel and already created
           ChannelPair channel;
           InetAddress srcIp, dstIp;
@@ -569,7 +576,20 @@ public class GridFTPTransfer implements StorkTransfer {
             synchronized (client.ccs) {
               client.ccs.add(channel);
             }
-            client.transferList(channel);
+
+            Thread transferListThread = new Thread(new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  client.transferList(channel);
+                } catch (Exception e) {
+                  e.printStackTrace();
+                }
+              }
+            });
+              transferListThread.start();
+              transferListThread.join();
+//            client.transferList(channel);
           } else {
             trial++;
 
