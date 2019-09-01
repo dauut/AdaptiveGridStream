@@ -7,10 +7,12 @@ import client.log.LogManager;
 import client.utils.Utils;
 import client.utils.Utils.Density;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import org.apache.axis.Part;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.globus.ftp.MlsxEntry;
+import stork.module.CooperativeModule;
 import stork.module.cooperative.GridFTPTransfer;
 import stork.util.XferList;
 
@@ -49,7 +51,11 @@ public class AdaptiveGridFTPClient {
     private ArrayList<Partition> tmpchunks = null;
     public ArrayList<Partition> chunks;
     private static int dataCheckCounter = 0;
-    public static int CHANNEL_COUNT = 10;
+//    public static int CHANNEL_COUNT = 5;
+    private static int totChanCountGlobal;
+    private boolean firstPassPast = false;
+
+
 
     public AdaptiveGridFTPClient() {
         // TODO Auto-generated constructor stub
@@ -70,6 +76,7 @@ public class AdaptiveGridFTPClient {
         AdaptiveGridFTPClient multiChunk = new AdaptiveGridFTPClient();
         multiChunk.parseArguments(args, multiChunk);
         multiChunk.checkNewData();
+        multiChunk.firstPassPast = true;
         multiChunk.streamTransfer();
 
         Thread checkDataPeriodically = new Thread(() -> {
@@ -81,10 +88,7 @@ public class AdaptiveGridFTPClient {
         });
         int i = 0;
         while (i < 100000) {
-//            if (multiChunk.isNewFile) {
-//                multiChunk.addNewFilesToChunks();
-//            }
-            Thread.sleep(5000);
+//            Thread.sleep(20000);
             checkDataPeriodically.run();
             checkDataPeriodically.join();
             i++;
@@ -98,7 +102,7 @@ public class AdaptiveGridFTPClient {
         dataCheckCounter++;
         System.err.println("checking new data. Counter = " + dataCheckCounter);
         while (dataNotChangeCounter < 20) {
-            Thread.sleep(5000); //wait for X sec. before next check
+            Thread.sleep(20000); //wait for X sec. before next check
             System.err.println(dataNotChangeCounter); //number of try.
             Thread checkData = new Thread(this::lookForNewData);
             checkData.start();
@@ -173,12 +177,17 @@ public class AdaptiveGridFTPClient {
             e.printStackTrace();
         }
         newDataset = dataset; // assign most recent datasetkk
-        if (isNewFile)
-            addNewFilesToChunks();
+        if (isNewFile && firstPassPast) {
+            try {
+                addNewFilesToChunks();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         return newDataset;
     }
 
-    private void addNewFilesToChunks() {
+    private void addNewFilesToChunks() throws Exception {
         XferList newFiles = newDataset;
         ArrayList<Partition> newChunks = partitionByFileSize(newFiles, maximumChunks, tmpchunks);
 
@@ -190,6 +199,53 @@ public class AdaptiveGridFTPClient {
             synchronized (chunks.get(1).getRecords()) {
                 chunks.get(1).getRecords().addAll(newChunks.get(1).getRecords());
             }
+        }
+        long totalDataSize = 0;
+
+        //chunk parameters gathering
+        for (int i = 0; i < chunks.size(); i++) {
+            XferList xl = chunks.get(i).getRecords();
+            totalDataSize += xl.size();
+            xl.initialSize = xl.size();
+            xl.updateDestinationPaths();
+            xl.channels = GridFTPTransfer.TransferChannel.channelPairList;
+            chunks.get(i).isReadyToTransfer = true;
+        }
+
+        if (chunks.get(0).getRecords().size() > totChanCountGlobal){
+            int[] channelAllocation = allocateChannelsToChunks(chunks, totChanCountGlobal);
+            // Reserve one file for each chunk before initiating channels otherwise
+            // pipelining may cause assigning all chunks to one channel.
+            List<List<XferList.MlsxEntry>> firstFilesToSend = new ArrayList<>();
+            for (int i = 0; i < chunks.size(); i++) {
+                List<XferList.MlsxEntry> files = Lists.newArrayListWithCapacity(channelAllocation[i]);
+                //setup channels for each chunk
+                XferList xl = chunks.get(i).getRecords();
+                for (int j = 0; j < channelAllocation[i]; j++) {
+                    files.add(xl.pop());
+                }
+                firstFilesToSend.add(files);
+            }
+
+            int currentChannelId = 0;
+
+
+            for (int i = 0; i < chunks.size(); i++) {
+                for (int j = 0; j < channelAllocation[i]; j++) {
+                    XferList.MlsxEntry firstFile = synchronizedPop(firstFilesToSend.get(i));
+                    boolean success = GridFTPTransfer.setupChannelConf(GridFTPTransfer.TransferChannel.channelPairList.get(j), currentChannelId, chunks.get(i), firstFile);
+                    if (success) {
+                        GridFTPTransfer.client.transferList(GridFTPTransfer.TransferChannel.channelPairList.get(j));
+                    }
+                    currentChannelId++;
+                }
+            }
+        }
+    }
+    //helper
+    public XferList.MlsxEntry synchronizedPop(List<XferList.MlsxEntry> fileList) {
+        synchronized (fileList) {
+            return fileList.remove(0);
         }
     }
 
@@ -257,6 +313,7 @@ public class AdaptiveGridFTPClient {
 
         // Make sure total channels count does not exceed total file count
         int totalChannelCount = Math.min(transferTask.getMaxConcurrency(), newDataset.count());
+        totChanCountGlobal = totalChannelCount;
 //        int totalChannelCount = CHANNEL_COUNT;
 
         for (int i = 0; i < estimatedParamsForChunks.length; i++) {

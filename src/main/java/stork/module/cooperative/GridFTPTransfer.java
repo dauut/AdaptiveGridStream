@@ -517,6 +517,8 @@ public class GridFTPTransfer implements StorkTransfer {
     Partition chunk;
     //List<String> blacklistedHosts
 
+    public static List<ChannelPair> channelPairList = new ArrayList<>();
+
     public TransferChannel(Partition chunk, int channelId, XferList.MlsxEntry file) {
       this.channelId = channelId;
       this.doStriping = 0;
@@ -567,6 +569,7 @@ public class GridFTPTransfer implements StorkTransfer {
           FTPURI dstFTPUri = new FTPURI(dstUri, du.cred);
           //System.out.println("Took " + (System.currentTimeMillis() - start)/1000.0 + " seconds to get cannocical name");
           channel = new ChannelPair(srcFTPUri, dstFTPUri);
+          channelPairList.add(channel);
           //System.out.println("Created a channel between " + channel.rc.fc.getHost() + " and " + channel.sc.fc.getHost());
           success = setupChannelConf(channel, channelId, chunk, firstFileToTransfer);
           if (success) {
@@ -576,7 +579,7 @@ public class GridFTPTransfer implements StorkTransfer {
             synchronized (client.ccs) {
               client.ccs.add(channel);
             }
-
+/*
             Thread transferListThread = new Thread(new Runnable() {
               @Override
               public void run() {
@@ -589,7 +592,11 @@ public class GridFTPTransfer implements StorkTransfer {
             });
               transferListThread.start();
               transferListThread.join();
-//            client.transferList(channel);
+*/
+            synchronized (chunk){
+              client.transferList(channel);
+            }
+
           } else {
             trial++;
 
