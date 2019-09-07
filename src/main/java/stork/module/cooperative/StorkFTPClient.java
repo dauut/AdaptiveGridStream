@@ -212,8 +212,8 @@ public class StorkFTPClient {
     for (int i = cc.inTransitFiles.size(); i < cc.pipelining + 1; i++) {
       pullAndSendAFile(cc);
     }
-    while (!cc.inTransitFiles.isEmpty()) {
-//    while (true) {
+//    while (!cc.inTransitFiles.isEmpty()) {
+    while (true) {
       fileList = cc.chunk.getRecords();
       // Read responses to piped commands.
       XferList.MlsxEntry e = cc.inTransitFiles.poll();
