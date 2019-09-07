@@ -8,4 +8,3 @@ src/main/resources/config2.cfg
 venv/
 src/main/java/Test.java
 src/main/bash/tmp.sh
-historical_data/
