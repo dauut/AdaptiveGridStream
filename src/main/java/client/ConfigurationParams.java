@@ -12,6 +12,7 @@ public class ConfigurationParams {
   public static double p_rate = 0.7;
   public static double ppq_rate = 0.99;
   static String INFO_LOG_ID = "throughput.log";
+  static String PARAMETERS_LOG = "params.log";
 
   static void init() {
     String home_dir_path = new File("").getAbsolutePath();

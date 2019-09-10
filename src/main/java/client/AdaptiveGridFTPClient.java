@@ -8,11 +8,8 @@ import client.utils.Utils;
 import client.utils.Utils.Density;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import org.apache.axis.Part;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.globus.ftp.MlsxEntry;
-import stork.module.CooperativeModule;
 import stork.module.cooperative.GridFTPTransfer;
 import stork.util.XferList;
 
@@ -20,7 +17,10 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 
 //@SuppressWarnings("Duplicates")
 public class AdaptiveGridFTPClient {
@@ -51,11 +51,10 @@ public class AdaptiveGridFTPClient {
     private ArrayList<Partition> tmpchunks = null;
     public ArrayList<Partition> chunks;
     private static int dataCheckCounter = 0;
-//    public static int CHANNEL_COUNT = 5;
+    //    public static int CHANNEL_COUNT = 5;
 //    private static int totChanCountGlobal;
     private static int totalChannelCount;
     private boolean firstPassPast = false;
-
 
 
     public AdaptiveGridFTPClient() {
@@ -63,6 +62,7 @@ public class AdaptiveGridFTPClient {
         //initialize output streams for message logging
         LogManager.createLogFile(ConfigurationParams.STDOUT_ID);
         LogManager.createLogFile(ConfigurationParams.INFO_LOG_ID);
+        LogManager.createLogFile(ConfigurationParams.PARAMETERS_LOG);
         transferTask = new Entry();
     }
 
@@ -76,9 +76,19 @@ public class AdaptiveGridFTPClient {
     public static void main(String[] args) throws Exception {
         AdaptiveGridFTPClient multiChunk = new AdaptiveGridFTPClient();
         multiChunk.parseArguments(args, multiChunk);
-        multiChunk.checkNewData();
+        multiChunk.lookForNewData();
         multiChunk.firstPassPast = true;
-        multiChunk.streamTransfer();
+//        multiChunk.streamTransfer();
+
+        Thread streamThread = new Thread(() -> {
+            try {
+                multiChunk.streamTransfer();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        streamThread.start();
 
         Thread checkDataPeriodically = new Thread(() -> {
             try {
@@ -87,13 +97,10 @@ public class AdaptiveGridFTPClient {
                 e.printStackTrace();
             }
         });
-        int i = 0;
-        while (i < 100000) {
+
 //            Thread.sleep(20000);
-            checkDataPeriodically.run();
-            checkDataPeriodically.join();
-            i++;
-        }
+        checkDataPeriodically.run();
+        checkDataPeriodically.join();
 
 //        multiChunk.closeConnection();
 //        System.err.println("Completed");
@@ -101,15 +108,17 @@ public class AdaptiveGridFTPClient {
 
     private boolean checkNewData() throws InterruptedException {
         dataCheckCounter++;
-        System.err.println("checking new data. Counter = " + dataCheckCounter);
-        while (dataNotChangeCounter < 20) {
-            if (firstPassPast){
-                Thread.sleep(60 * 1000); //wait for X sec. before next check
-            }
-            System.err.println(dataNotChangeCounter); //number of try.
-            Thread checkData = new Thread(this::lookForNewData);
-            checkData.start();
-            checkData.join();
+        System.err.println("Checking new data. Counter = " + dataCheckCounter);
+        while (dataNotChangeCounter < 1000) {
+            Thread.sleep(10 * 1000); //wait for X sec. before next check
+            System.err.println("dataNotChangeCounter: " + dataNotChangeCounter); //number of try.
+//            Thread checkData1 = new Thread(this::lookForNewData);
+//            checkData1.run();
+//            checkData1.join();
+//            Thread checkData = new Thread(this::lookForNewData);
+//            checkData.start();
+//            checkData.join();
+            lookForNewData();
             if (isNewFile) {
                 dataNotChangeCounter = 0;
                 return isNewFile;
@@ -191,7 +200,7 @@ public class AdaptiveGridFTPClient {
     private void addNewFilesToChunks() throws Exception {
         XferList newFiles = newDataset;
 
-        synchronized(chunks.get(0).getRecords()) {
+        synchronized (chunks.get(0).getRecords()) {
             partitionByFileSize(newFiles, maximumChunks, chunks);
 //            chunks.get(0).getRecords().addNewFilesToChunk(newChunks.get(0).getRecords());
 //            if (chunks.size() > 1) {
@@ -205,6 +214,9 @@ public class AdaptiveGridFTPClient {
         for (int i = 0; i < estimatedParamsForChunks.length; i++) {
             chunks.get(i).setTunableParameters(Utils.getBestParams(chunks.get(i).getRecords(), maximumChunks));
         }
+
+        LogManager.writeToLog("Other rounds of transfer ", ConfigurationParams.PARAMETERS_LOG);
+        writeParameterLogs(chunks, estimatedParamsForChunks);
 
         for (Partition chunk : chunks) {
             LOG.info("NewestChunk :" + chunk.getDensity().name() + " cc:" + chunk.getTunableParameters().getConcurrency() +
@@ -223,7 +235,7 @@ public class AdaptiveGridFTPClient {
             chunks.get(i).isReadyToTransfer = true;
         }
 
-        if (chunks.get(0).getRecords().size() > totalChannelCount){
+        if (chunks.get(0).getRecords().size() > totalChannelCount) {
             int[] channelAllocation = allocateChannelsToChunks(chunks, totalChannelCount);
             // Reserve one file for each chunk before initiating channels otherwise
             // pipelining may cause assigning all chunks to one channel.
@@ -253,6 +265,18 @@ public class AdaptiveGridFTPClient {
             }
         }
     }
+
+    private void writeParameterLogs(ArrayList<Partition> chunks, int[][] estimatedParamsForChunks) {
+        for (int i = 0; i < estimatedParamsForChunks.length; i++) {
+            LogManager.writeToLog("Parallelism: " + chunks.get(i).getTunableParameters().getParallelism() +
+                            "; Pipelining: " + chunks.get(i).getTunableParameters().getPipelining() +
+                            "; Concurrency: " + chunks.get(i).getTunableParameters().getConcurrency(),
+                    ConfigurationParams.PARAMETERS_LOG);
+
+            chunks.get(i).setTunableParameters(Utils.getBestParams(chunks.get(i).getRecords(), maximumChunks));
+        }
+    }
+
     //helper
     public XferList.MlsxEntry synchronizedPop(List<XferList.MlsxEntry> fileList) {
         synchronized (fileList) {
@@ -330,6 +354,10 @@ public class AdaptiveGridFTPClient {
         for (int i = 0; i < estimatedParamsForChunks.length; i++) {
             chunks.get(i).setTunableParameters(Utils.getBestParams(chunks.get(i).getRecords(), maximumChunks));
         }
+
+        LogManager.writeToLog("First round of transfer ", ConfigurationParams.PARAMETERS_LOG);
+        writeParameterLogs(chunks, estimatedParamsForChunks);
+
         LOG.info(" Running MC with :" + totalChannelCount + " channels.");
         for (Partition chunk : chunks) {
             LOG.info("Chunk :" + chunk.getDensity().name() + " cc:" + chunk.getTunableParameters().getConcurrency() +
@@ -525,7 +553,8 @@ public class AdaptiveGridFTPClient {
             Density density = Utils.findDensityOfFile(e.size(), transferTask.getBandwidth(), maximumChunks);
             try {
                 partitions.get(density.ordinal()).addRecord(e);
-            }catch (IndexOutOfBoundsException ex){
+            } catch (IndexOutOfBoundsException ex) {
+                //that's not a nice way to add but it works for now
                 ex.printStackTrace();
                 Partition p2 = new Partition();
                 partitions.add(p2);
