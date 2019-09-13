@@ -11,6 +11,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import stork.module.CooperativeModule;
 import stork.module.cooperative.GridFTPTransfer;
 import stork.util.XferList;
 
@@ -196,7 +197,7 @@ public class AdaptiveGridFTPClient {
     }
 
     private void addNewFilesToChunks() throws Exception {
-        boolean staticSettings = true;
+        boolean staticSettings = false;
         XferList newFiles = newDataset;
 
         synchronized (chunks.get(0).getRecords()) {
@@ -269,6 +270,11 @@ public class AdaptiveGridFTPClient {
             LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
                             transferTask.getMaxConcurrency() + " Throughput:" + (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)),
                     ConfigurationParams.INFO_LOG_ID);
+
+            LogManager.writeToLog("TRANSFER NUMBER = " + TRANSFER_NUMBER + " " + algorithm.name() + " chunks: " + maximumChunks + " Throughput:" + "size:" +
+                    Utils.printSize(datasetSize, true) + " time:" + timeSpent + " thr: " +
+                    (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)), ConfigurationParams.PARAMETERS_LOG);
+
             System.out.println("TRANSFER NUMBER = " + TRANSFER_NUMBER + " " + algorithm.name() + " chunks: " + maximumChunks + " Throughput:" + "size:" +
                     Utils.printSize(datasetSize, true) + " time:" + timeSpent + " thr: " +
                     (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)));
@@ -370,7 +376,7 @@ public class AdaptiveGridFTPClient {
             chunks.get(i).setTunableParameters(Utils.getBestParams(chunks.get(i).getRecords(), maximumChunks));
         }
 
-        LogManager.writeToLog("First round of transfer ", ConfigurationParams.PARAMETERS_LOG);
+        LogManager.writeToLog("-----------------------------\n\n" + "First round of transfer ", ConfigurationParams.PARAMETERS_LOG);
         writeParameterLogs(chunks, estimatedParamsForChunks);
 
         LOG.info(" Running MC with :" + totalChannelCount + " channels.");

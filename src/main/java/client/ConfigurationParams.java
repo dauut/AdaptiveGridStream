@@ -4,7 +4,8 @@ import java.io.File;
 
 public class ConfigurationParams {
 
-  public static String INPUT_DIR = "/Users/earslan/HARP/historical_data/activeFiles/";
+    public static final String PARAMETERS_LOG = "params.log";;
+    public static String INPUT_DIR = "/Users/earslan/HARP/historical_data/activeFiles/";
   public static String OUTPUT_DIR = "/Users/earslan/HARP/target/";
   public static long MAXIMUM_SINGLE_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
   public static String STDOUT_ID = "stdout";
@@ -12,7 +13,6 @@ public class ConfigurationParams {
   public static double p_rate = 0.7;
   public static double ppq_rate = 0.99;
   static String INFO_LOG_ID = "throughput.log";
-  static String PARAMETERS_LOG = "params.log";
 
   static void init() {
     String home_dir_path = new File("").getAbsolutePath();

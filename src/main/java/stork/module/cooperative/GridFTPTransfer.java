@@ -5,6 +5,7 @@ import client.ConfigurationParams;
 import client.Partition;
 import client.hysterisis.Entry;
 import client.hysterisis.Hysterisis;
+import client.log.LogManager;
 import client.utils.TunableParameters;
 import client.utils.Utils;
 import com.google.common.collect.Lists;
@@ -327,6 +328,7 @@ public class GridFTPTransfer implements StorkTransfer {
     client.ccs = new ArrayList<>(totalChannels);
     int currentChannelId = 0;
     long start = System.currentTimeMillis();
+    long timeSpent = 0;
     for (int i = 0; i < totalChunks; i++) {
       CooperativeModule.LOG.info(channelAllocations[i] + " channels will be created for chunk " + i);
       for (int j = 0; j < channelAllocations[i]; j++) {
@@ -345,8 +347,14 @@ public class GridFTPTransfer implements StorkTransfer {
 
     long finish = System.currentTimeMillis();
     double thr = totalDataSize * 8 / ((finish - start) / 1000.0);
-//    CooperativeModule.LOG.info(" Time:" + ((finish - start) / 1000.0) + " sec Thr:" + (thr / (1000 * 1000)));
+    timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
+    //    CooperativeModule.LOG.info(" Time:" + ((finish - start) / 1000.0) + " sec Thr:" + (thr / (1000 * 1000)));
     System.out.println("FIRST TRANSFER: " + "Time:" + ((finish - start) / 1000.0) + " sec Thr:" + (thr / (1000 * 1000)));
+
+    LogManager.writeToLog( "FIRST TRANSFER: "  + "Throughput:" + "size:" +
+            Utils.printSize(totalDataSize, true) + " time:" + timeSpent + " thr: " +
+            (totalDataSize * 8.0) / (timeSpent * (1000.0 * 1000)), ConfigurationParams.PARAMETERS_LOG);
+
     // Close channels
     /*futures.clear();
     client.ccs.forEach(cp -> cp.close());
