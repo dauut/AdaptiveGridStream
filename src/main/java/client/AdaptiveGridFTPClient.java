@@ -11,7 +11,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import stork.module.CooperativeModule;
 import stork.module.cooperative.GridFTPTransfer;
 import stork.util.XferList;
 
@@ -48,9 +47,9 @@ public class AdaptiveGridFTPClient {
     private int dataNotChangeCounter = 0;
     private XferList newDataset;
     private HashSet<String> allFiles = new HashSet<>();
-    public boolean isNewFile = false;
+    private boolean isNewFile = false;
     private ArrayList<Partition> tmpchunks = null;
-    public ArrayList<Partition> chunks;
+    private ArrayList<Partition> chunks;
     private static int dataCheckCounter = 0;
     //    public static int CHANNEL_COUNT = 5;
 //    private static int totChanCountGlobal;
@@ -254,19 +253,19 @@ public class AdaptiveGridFTPClient {
 
             int currentChannelId = 0;
 
-            start = System.currentTimeMillis();
             for (int i = 0; i < chunks.size(); i++) {
                 for (int j = 0; j < channelAllocation[i]; j++) {
                     XferList.MlsxEntry firstFile = synchronizedPop(firstFilesToSend.get(i));
                     boolean success = GridFTPTransfer.setupChannelConf(GridFTPTransfer.TransferChannel.channelPairList.get(j), currentChannelId, chunks.get(i), firstFile);
                     if (success) {
+                        start = System.currentTimeMillis();
                         GridFTPTransfer.client.transferList(GridFTPTransfer.TransferChannel.channelPairList.get(j));
+                        timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
                     }
                     currentChannelId++;
                 }
             }
 
-            timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
             LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
                             transferTask.getMaxConcurrency() + " Throughput:" + (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)),
                     ConfigurationParams.INFO_LOG_ID);
