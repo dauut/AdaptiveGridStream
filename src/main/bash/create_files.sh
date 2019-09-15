@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 # arg1 = dir name
 # arg2 = files name
@@ -5,6 +6,8 @@
 # arg4 = end index
 # arg5 = seed
 # arg6 = dump size
+
+SECONDS=0
 
 if [ -d "./$1" ]
 then
@@ -21,6 +24,9 @@ for ((i = $3; i <= $4; i++)); do
   #	delay_time=$(((RANDOM%5)+1))
   count_of_dump=$(((RANDOM % 2) + $5))
   #	sleep $delay_time
-  dd if=/dev/zero of=/home/dauut/Documents/AdaptiveGrid/src/main/bash/$1/$filename bs=$6M count=$count_of_dump
+  dd if=/dev/zero of=$PWD/$1/$filename bs=$6M count=$count_of_dump
   filename=$2
 done
+
+duration=$SECONDS
+echo "$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed."
