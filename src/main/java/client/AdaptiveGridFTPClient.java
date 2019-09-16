@@ -64,6 +64,7 @@ public class AdaptiveGridFTPClient {
         LogManager.createLogFile(ConfigurationParams.STDOUT_ID);
         LogManager.createLogFile(ConfigurationParams.INFO_LOG_ID);
         LogManager.createLogFile(ConfigurationParams.PARAMETERS_LOG);
+        LogManager.createLogFile(ConfigurationParams.RESULTS);
         transferTask = new Entry();
     }
 
@@ -196,7 +197,7 @@ public class AdaptiveGridFTPClient {
     }
 
     private void addNewFilesToChunks() throws Exception {
-        boolean staticSettings = false;
+        boolean staticSettings = true;
         XferList newFiles = newDataset;
 
         synchronized (chunks.get(0).getRecords()) {
@@ -266,17 +267,22 @@ public class AdaptiveGridFTPClient {
                 }
             }
 
-            LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
-                            transferTask.getMaxConcurrency() + " Throughput:" + (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)),
-                    ConfigurationParams.INFO_LOG_ID);
+            double throughput = (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000));
 
-            LogManager.writeToLog("TRANSFER NUMBER = " + TRANSFER_NUMBER + " " + algorithm.name() + " chunks: " + maximumChunks + " Throughput:" + "size:" +
-                    Utils.printSize(datasetSize, true) + " time:" + timeSpent + " thr: " +
-                    (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)), ConfigurationParams.PARAMETERS_LOG);
+
+//            LogManager.writeToLog(algorithm.name() + "\tchunks\t" + maximumChunks + "\tmaxCC\t" +
+//                            transferTask.getMaxConcurrency() + " Throughput:" + throughput,
+//                    ConfigurationParams.INFO_LOG_ID);
+//
+//            LogManager.writeToLog("TRANSFER NUMBER = " + TRANSFER_NUMBER + " " + algorithm.name() + " chunks: " + maximumChunks + " Throughput:" + "size:" +
+//                    Utils.printSize(datasetSize, true) + " time:" + timeSpent + " thr: " +
+//                    throughput, ConfigurationParams.PARAMETERS_LOG);
+
+            LogManager.writeToLog(timeSpent+ "\t" + throughput, ConfigurationParams.RESULTS);
 
             System.out.println("TRANSFER NUMBER = " + TRANSFER_NUMBER + " " + algorithm.name() + " chunks: " + maximumChunks + " Throughput:" + "size:" +
                     Utils.printSize(datasetSize, true) + " time:" + timeSpent + " thr: " +
-                    (datasetSize * 8.0) / (timeSpent * (1000.0 * 1000)));
+                    throughput);
             TRANSFER_NUMBER++;
 
         }

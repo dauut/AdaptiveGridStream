@@ -327,8 +327,7 @@ public class GridFTPTransfer implements StorkTransfer {
         }
         client.ccs = new ArrayList<>(totalChannels);
         int currentChannelId = 0;
-        long start = System.currentTimeMillis();
-        long timeSpent = 0;
+
         for (int i = 0; i < totalChunks; i++) {
             CooperativeModule.LOG.info(channelAllocations[i] + " channels will be created for chunk " + i);
             for (int j = 0; j < channelAllocations[i]; j++) {
@@ -341,6 +340,9 @@ public class GridFTPTransfer implements StorkTransfer {
         CooperativeModule.LOG.info("Created " + client.ccs.size() + "channels");
         //this is monitoring thread which measures throughput of each chunk in every 3 seconds
         //executor.submit(new TransferMonitor());
+        long start = System.currentTimeMillis();
+        long timeSpent = 0;
+
         for (Future<?> future : futures) {
             future.get();
         }
@@ -349,12 +351,16 @@ public class GridFTPTransfer implements StorkTransfer {
         double thr = totalDataSize * 8 / ((finish - start) / 1000.0);
         timeSpent += ((System.currentTimeMillis() - start) / 1000.0);
         //    CooperativeModule.LOG.info(" Time:" + ((finish - start) / 1000.0) + " sec Thr:" + (thr / (1000 * 1000)));
-        System.out.println("FIRST TRANSFER: " + "Time:" + ((finish - start) / 1000.0) + " sec Thr:" + (thr / (1000 * 1000)));
+        System.err.println("FIRST TRANSFER COMPLETED: " + "Time:" + ((finish - start) / 1000.0) + " sec Thr:" + (thr / (1000 * 1000)));
+        double throughput = (totalDataSize * 8.0) / (timeSpent * (1000.0 * 1000));
+//        LogManager.writeToLog( "FIRST TRANSFER: "  + "Throughput:" + "size:" +
+//            Utils.printSize(totalDataSize, true) + " time:" + timeSpent + " thr: " +
+//            (totalDataSize * 8.0) / (timeSpent * (1000.0 * 1000)), ConfigurationParams.PARAMETERS_LOG);
 
-        LogManager.writeToLog( "FIRST TRANSFER: "  + "Throughput:" + "size:" +
-            Utils.printSize(totalDataSize, true) + " time:" + timeSpent + " thr: " +
-            (totalDataSize * 8.0) / (timeSpent * (1000.0 * 1000)), ConfigurationParams.PARAMETERS_LOG);
-
+//        LogManager.writeToLog( "FIRST TRANSFER:\t"  + "Throughput" + " size:\t" +
+//                Utils.printSize(totalDataSize, true) + " time:\t" + timeSpent + " thr:\t" +
+//                (totalDataSize * 8.0) / (timeSpent * (1000.0 * 1000)), ConfigurationParams.PARAMETERS_LOG);
+        LogManager.writeToLog(timeSpent+ "\t" + throughput, ConfigurationParams.RESULTS);
         // Close channels
     /*futures.clear();
     client.ccs.forEach(cp -> cp.close());
