@@ -110,13 +110,7 @@ public class AdaptiveGridFTPClient {
         System.err.println("Checking new data. Counter = " + dataCheckCounter);
         while (dataNotChangeCounter < 1000) {
             Thread.sleep(10 * 1000); //wait for X sec. before next check
-            System.err.println("dataNotChangeCounter: " + dataNotChangeCounter); //number of try.
-//            Thread checkData1 = new Thread(this::lookForNewData);
-//            checkData1.run();
-//            checkData1.join();
-//            Thread checkData = new Thread(this::lookForNewData);
-//            checkData.start();
-//            checkData.join();
+            System.err.println("dataNotChangeCounter: " + dataNotChangeCounter);
             lookForNewData();
             if (isNewFile) {
                 dataNotChangeCounter = 0;
