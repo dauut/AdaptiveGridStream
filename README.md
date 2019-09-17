@@ -1,4 +1,4 @@
-## This repo archived due to Globus update. New code is here : 
+This repo archived due to Globus update. [New code is here.](https://github.com/dauut/AdaptiveGridFTPClientStream) 
 
 ---------------------------------------------------------------------------------------------
 
